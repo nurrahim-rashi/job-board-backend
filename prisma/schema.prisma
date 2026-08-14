@@ -1,0 +1,256 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  JOB_SEEKER
+  COMPANY_ADMIN
+  DEVELOPER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum ApplicationStatus {
+  PENDING
+  PROCESS
+  INTERVIEW
+  ACCEPTED
+  REJECTED
+}
+
+enum SubscriptionName {
+  STANDARD
+  PROFESSIONAL
+}
+
+enum UserSubscriptionStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  EXPIRED
+}
+
+model User {
+  id              Int       @id @default(autoincrement())
+  name            String
+  email           String    @unique
+  password        String
+  role            UserRole  @default(JOB_SEEKER)
+  birthDate       DateTime?
+  gender          Gender?
+  lastEducation   String?
+  address         String?   @db.Text
+  avatar          String?
+  emailVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  company         Company?
+  jobApplications JobApplication[]
+  subscriptions   UserSubscription[]
+  companyReviews  CompanyReview[]
+  userAssessments UserAssessment[]
+
+  @@map("users")
+}
+
+model Company {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @unique
+  companyName    String
+  phone          String
+  profileContent String   @db.Text
+  logo           String?
+  city           String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id])
+  jobPostings JobPosting[]
+  reviews     CompanyReview[]
+
+  @@map("companies")
+}
+
+model JobPosting {
+  id           Int      @id @default(autoincrement())
+  companyId    Int
+  title        String
+  description  String   @db.Text
+  banner       String?
+  category     String
+  cityLocation String
+  salaryMin    Decimal? @db.Decimal(15, 2)
+  salaryMax    Decimal? @db.Decimal(15, 2)
+  tags         Json?
+  deadline     DateTime
+  isPublished  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company           Company            @relation(fields: [companyId], references: [id])
+  applications      JobApplication[]
+  preSelectionTests PreSelectionTest[]
+
+  @@index([companyId])
+  @@index([isPublished, deadline])
+  @@map("job_postings")
+}
+
+model JobApplication {
+  id              Int               @id @default(autoincrement())
+  jobId           Int
+  userId          Int
+  cvFile          String
+  expectedSalary  Decimal?          @db.Decimal(15, 2)
+  status          ApplicationStatus @default(PENDING)
+  rejectionReason String?           @db.Text
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  job        JobPosting           @relation(fields: [jobId], references: [id])
+  user       User                 @relation(fields: [userId], references: [id])
+  testResult ApplicantTestResult?
+  interview  Interview?
+
+  @@unique([jobId, userId])
+  @@index([userId])
+  @@index([status])
+  @@map("job_applications")
+}
+
+model PreSelectionTest {
+  id            Int      @id @default(autoincrement())
+  jobId         Int
+  question      String   @db.Text
+  options       Json
+  correctAnswer String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  job JobPosting @relation(fields: [jobId], references: [id])
+
+  @@index([jobId])
+  @@map("pre_selection_tests")
+}
+
+model ApplicantTestResult {
+  id               Int      @id @default(autoincrement())
+  jobApplicationId Int      @unique
+  score            Decimal  @db.Decimal(5, 2)
+  isPassed         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  jobApplication JobApplication @relation(fields: [jobApplicationId], references: [id])
+
+  @@map("applicant_test_results")
+}
+
+model Interview {
+  id               Int      @id @default(autoincrement())
+  jobApplicationId Int      @unique
+  interviewDate    DateTime
+  locationOrLink   String
+  notes            String?  @db.Text
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  jobApplication JobApplication @relation(fields: [jobApplicationId], references: [id])
+
+  @@map("interviews")
+}
+
+model Subscription {
+  id             Int              @id @default(autoincrement())
+  name           SubscriptionName @unique
+  price          Decimal          @db.Decimal(15, 2)
+  durationDays   Int              @default(30)
+  featuresAccess Json
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  userSubscriptions UserSubscription[]
+
+  @@map("subscriptions")
+}
+
+model UserSubscription {
+  id             Int                    @id @default(autoincrement())
+  userId         Int
+  subscriptionId Int
+  paymentProof   String?
+  status         UserSubscriptionStatus @default(PENDING_APPROVAL)
+  startDate      DateTime?
+  endDate        DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id])
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([status, endDate])
+  @@map("user_subscriptions")
+}
+
+model CompanyReview {
+  id             Int      @id @default(autoincrement())
+  companyId      Int
+  userId         Int
+  jobTitleHeld   String
+  salaryEstimate Decimal? @db.Decimal(15, 2)
+  ratingCulture  Int
+  ratingWorkLife Int
+  ratingFacility Int
+  ratingCareer   Int
+  reviewText     String   @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([companyId])
+  @@index([userId])
+  @@map("company_reviews")
+}
+
+model SkillAssessment {
+  id            Int      @id @default(autoincrement())
+  skillName     String
+  question      String   @db.Text
+  options       Json
+  correctAnswer String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([skillName])
+  @@map("skill_assessments")
+}
+
+model UserAssessment {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  skillName       String
+  score           Decimal  @db.Decimal(5, 2)
+  isPassed        Boolean  @default(false)
+  certificateCode String?  @unique
+  badgeName       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([skillName])
+  @@map("user_assessments")
+}
