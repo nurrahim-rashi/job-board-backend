@@ -37,26 +37,65 @@ enum UserSubscriptionStatus {
   EXPIRED
 }
 
+enum AnswerOption {
+  A
+  B
+  C
+  D
+}
+
+enum JobCategory {
+  TECHNOLOGY
+  FINANCE
+  MARKETING
+  SALES
+  DESIGN
+  HUMAN_RESOURCES
+  OPERATIONS
+  EDUCATION
+  HEALTHCARE
+  OTHER
+}
+
+enum LastEducation {
+  SD
+  SMP
+  SMA_SMK
+  D3
+  S1
+  S2
+  S3
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
 model User {
-  id              Int       @id @default(autoincrement())
+  id              Int            @id @default(autoincrement())
   name            String
-  email           String    @unique
+  email           String         @unique
   password        String
-  role            UserRole  @default(JOB_SEEKER)
+  role            UserRole       @default(JOB_SEEKER)
   birthDate       DateTime?
   gender          Gender?
-  lastEducation   String?
-  address         String?   @db.Text
+  lastEducation   LastEducation?
+  address         String?        @db.Text
+  city            String?
+  province        String?
   avatar          String?
   emailVerifiedAt DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   company         Company?
   jobApplications JobApplication[]
   subscriptions   UserSubscription[]
   companyReviews  CompanyReview[]
   userAssessments UserAssessment[]
+  testResults     ApplicantTestResult[]
 
   @@map("users")
 }
@@ -80,27 +119,31 @@ model Company {
 }
 
 model JobPosting {
-  id           Int      @id @default(autoincrement())
-  companyId    Int
-  title        String
-  description  String   @db.Text
-  banner       String?
-  category     String
-  cityLocation String
-  salaryMin    Decimal? @db.Decimal(15, 2)
-  salaryMax    Decimal? @db.Decimal(15, 2)
-  tags         Json?
-  deadline     DateTime
-  isPublished  Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                  Int         @id @default(autoincrement())
+  companyId           Int
+  title               String
+  description         String      @db.Text
+  banner              String?
+  category            JobCategory
+  cityLocation        String
+  salaryMin           Decimal?    @db.Decimal(15, 2)
+  salaryMax           Decimal?    @db.Decimal(15, 2)
+  hasPreSelectionTest Boolean     @default(false)
+  testDurationMinutes Int?
+  tags                Json?
+  deadline            DateTime
+  isPublished         Boolean     @default(false)
+  deletedAt           DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
-  company           Company            @relation(fields: [companyId], references: [id])
+  company           Company               @relation(fields: [companyId], references: [id])
   applications      JobApplication[]
   preSelectionTests PreSelectionTest[]
+  testResults       ApplicantTestResult[]
 
-  @@index([companyId])
-  @@index([isPublished, deadline])
+  @@index([companyId, deletedAt])
+  @@index([deletedAt, isPublished, deadline])
   @@map("job_postings")
 }
 
@@ -122,49 +165,78 @@ model JobApplication {
 
   @@unique([jobId, userId])
   @@index([userId])
-  @@index([status])
+  @@index([jobId, createdAt])
+  @@index([jobId, status])
   @@map("job_applications")
 }
 
 model PreSelectionTest {
-  id            Int      @id @default(autoincrement())
+  id            Int          @id @default(autoincrement())
   jobId         Int
-  question      String   @db.Text
+  question      String       @db.Text
   options       Json
-  correctAnswer String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  correctAnswer AnswerOption
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
-  job JobPosting @relation(fields: [jobId], references: [id])
+  job     JobPosting            @relation(fields: [jobId], references: [id])
+  answers ApplicantTestAnswer[]
 
   @@index([jobId])
   @@map("pre_selection_tests")
 }
 
 model ApplicantTestResult {
-  id               Int      @id @default(autoincrement())
-  jobApplicationId Int      @unique
-  score            Decimal  @db.Decimal(5, 2)
-  isPassed         Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id               Int       @id @default(autoincrement())
+  jobId            Int
+  userId           Int
+  jobApplicationId Int?      @unique
+  score            Decimal?  @db.Decimal(5, 2)
+  startedAt        DateTime  @default(now())
+  submittedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  jobApplication JobApplication @relation(fields: [jobApplicationId], references: [id])
+  job            JobPosting            @relation(fields: [jobId], references: [id])
+  user           User                  @relation(fields: [userId], references: [id])
+  jobApplication JobApplication?       @relation(fields: [jobApplicationId], references: [id])
+  answers        ApplicantTestAnswer[]
 
+  @@unique([jobId, userId])
+  @@index([userId])
   @@map("applicant_test_results")
 }
 
+model ApplicantTestAnswer {
+  id             Int          @id @default(autoincrement())
+  testResultId   Int
+  questionId     Int
+  selectedAnswer AnswerOption
+  isCorrect      Boolean
+  createdAt      DateTime     @default(now())
+
+  testResult ApplicantTestResult @relation(fields: [testResultId], references: [id], onDelete: Cascade)
+  question   PreSelectionTest    @relation(fields: [questionId], references: [id])
+
+  @@unique([testResultId, questionId])
+  @@index([questionId])
+  @@map("applicant_test_answers")
+}
+
 model Interview {
-  id               Int      @id @default(autoincrement())
-  jobApplicationId Int      @unique
+  id               Int             @id @default(autoincrement())
+  jobApplicationId Int             @unique
   interviewDate    DateTime
   locationOrLink   String
-  notes            String?  @db.Text
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  notes            String?         @db.Text
+  status           InterviewStatus @default(SCHEDULED)
+  reminderSentAt   DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   jobApplication JobApplication @relation(fields: [jobApplicationId], references: [id])
 
+  @@index([interviewDate, status, reminderSentAt])
   @@map("interviews")
 }
 
@@ -225,13 +297,13 @@ model CompanyReview {
 }
 
 model SkillAssessment {
-  id            Int      @id @default(autoincrement())
+  id            Int          @id @default(autoincrement())
   skillName     String
-  question      String   @db.Text
+  question      String       @db.Text
   options       Json
-  correctAnswer String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  correctAnswer AnswerOption
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   @@index([skillName])
   @@map("skill_assessments")
