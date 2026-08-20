@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma.js";
+import { ApiError } from "../utils/api-error.js";
 
 export const createReviewService = async (
     userId: number,
@@ -13,6 +14,17 @@ export const createReviewService = async (
         reviewText: string;
     },
 ) => {
+    // Cek perusahaan nya ada apa ngga
+    const company = await prisma.company.findUnique({
+        where: {
+            id: companyId,
+        },
+    });
+
+    if (!company) {
+        throw new ApiError("Company not found", 404);
+    }
+
     // Cek user diterima di perusahaan apa ngga
     const employment = await prisma.jobApplication.findFirst({
         where: {
@@ -25,7 +37,7 @@ export const createReviewService = async (
     });
 
     if (!employment) {
-        throw new Error ("You can only review a company if you are a verified employee",);
+        throw new ApiError ("You can only review a company if you are a verified employee", 403);
     }
 
     // Cek user pernah review sebelumnya apa ngga
@@ -37,7 +49,7 @@ export const createReviewService = async (
     });
 
     if (existingReview) {
-        throw new Error("You have already reviewed this company");
+        throw new ApiError("You have already reviewed this company", 409);
     }
 
     // Validasi ratings
