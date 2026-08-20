@@ -3,6 +3,8 @@ import "dotenv/config";
 import cors from "cors";
 import { corsOptions } from "./config/cors.js";
 import { reviewRoutes } from "./routes/review.routes.js";
+import { authRoutes } from "./routes/auth.routes.js";
+import { errorHandler } from "./middlewares/error.middleware.js";
 
 const app = express();
 
@@ -12,9 +14,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // entry points
+app.use("/auth", authRoutes);
 app.use("/reviews", reviewRoutes);
 
 // errors
+app.use(errorHandler);
 
 // crons
 
