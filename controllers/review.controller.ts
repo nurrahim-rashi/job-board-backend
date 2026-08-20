@@ -6,15 +6,13 @@ export const createReviewController = async (
     req: any,
     res: Response,
 ) => {
-    const validateData = createReviewSchema.parse(req.body);
-
     const userId = req.user.id;
     const companyId = Number(req.params.companyId);
 
     const review = await createReviewService(
         userId,
         companyId,
-        validateData,
+        req.body,
     );
 
     return res.status(201).json({
