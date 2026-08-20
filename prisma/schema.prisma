@@ -19,6 +19,7 @@ enum Gender {
 }
 
 enum ApplicationStatus {
+  DRAFT
   PENDING
   PROCESS
   INTERVIEW
@@ -57,16 +58,6 @@ enum JobCategory {
   OTHER
 }
 
-enum LastEducation {
-  SD
-  SMP
-  SMA_SMK
-  D3
-  S1
-  S2
-  S3
-}
-
 enum InterviewStatus {
   SCHEDULED
   COMPLETED
@@ -81,7 +72,7 @@ model User {
   role            UserRole       @default(JOB_SEEKER)
   birthDate       DateTime?
   gender          Gender?
-  lastEducation   LastEducation?
+  lastEducation   String?
   address         String?        @db.Text
   city            String?
   province        String?
