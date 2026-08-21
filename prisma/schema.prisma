@@ -21,6 +21,7 @@ enum Gender {
 enum ApplicationStatus {
   DRAFT
   PENDING
+  TEST_ASSIGNED
   PROCESS
   INTERVIEW
   ACCEPTED
