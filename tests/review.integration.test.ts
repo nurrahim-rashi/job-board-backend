@@ -44,6 +44,7 @@ const createAcceptedApplication = async (userId: number, companyId: number) => {
     data: {
       companyId,
       title: "Backend Developer",
+      slug: `backend-developer-test-${Date.now()}`,
       description: "Backend developer test job",
       category: "TECHNOLOGY",
       cityLocation: "Jakarta",
