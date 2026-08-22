@@ -13,6 +13,7 @@ const app = express();
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", express.static("uploads"));
 
 // entry points
 app.use("/auth", authRoutes);

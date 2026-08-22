@@ -13,6 +13,11 @@ enum UserRole {
   DEVELOPER
 }
 
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+}
+
 enum Gender {
   MALE
   FEMALE
@@ -69,7 +74,8 @@ model User {
   id              Int            @id @default(autoincrement())
   name            String
   email           String         @unique
-  password        String
+  password        String?
+  authProvider    AuthProvider   @default(EMAIL)
   role            UserRole       @default(JOB_SEEKER)
   birthDate       DateTime?
   gender          Gender?
@@ -79,6 +85,10 @@ model User {
   province        String?
   avatar          String?
   emailVerifiedAt DateTime?
+  emailVerificationTokenHash String?
+  emailVerificationExpiresAt DateTime?
+  passwordResetTokenHash     String?
+  passwordResetExpiresAt     DateTime?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
