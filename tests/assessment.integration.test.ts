@@ -34,7 +34,7 @@ describe("POST /assessment", () => {
     await prisma.skillAssessment.deleteMany();
 
     if (testUserId) {
-      await prisma.user.delete({
+      await prisma.user.deleteMany({
         where: {
           id: testUserId,
         },
@@ -168,5 +168,32 @@ describe("POST /assessment", () => {
     expect(savedAssessment?.passingScore).toBe(75);
     expect(savedAssessment?.durationMinutes).toBe(30);
     expect(savedAssessment?.questionCount).toBe(25);
+  });
+
+  it("Should reject duplicate assessment for the same skill", async () => {
+    const developer = await createDeveloper();
+    testUserId = developer.id;
+
+    const token = createToken(developer);
+
+    const assessmentData = {
+      skillName: "TypeScript",
+      title: "TypeScript Fundamentals",
+      description: "Assessment for TypeScript fundamentals",
+    };
+
+    const firstResponse = await request(app)
+      .post("/assessment")
+      .set("Authorization", `Bearer ${token}`)
+      .send(assessmentData);
+
+    expect(firstResponse.status).toBe(201);
+
+    const secondResponse = await request(app)
+      .post("/assessment")
+      .set("Authorization", `Bearer ${token}`)
+      .send(assessmentData);
+
+    expect(secondResponse.status).toBe(409);
   });
 });
