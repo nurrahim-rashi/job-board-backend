@@ -71,33 +71,33 @@ enum InterviewStatus {
 }
 
 model User {
-  id              Int            @id @default(autoincrement())
-  name            String
-  email           String         @unique
-  password        String?
-  authProvider    AuthProvider   @default(EMAIL)
-  role            UserRole       @default(JOB_SEEKER)
-  birthDate       DateTime?
-  gender          Gender?
-  lastEducation   String?
-  address         String?        @db.Text
-  city            String?
-  province        String?
-  avatar          String?
-  emailVerifiedAt DateTime?
+  id                         Int          @id @default(autoincrement())
+  name                       String
+  email                      String       @unique
+  password                   String?
+  authProvider               AuthProvider @default(EMAIL)
+  role                       UserRole     @default(JOB_SEEKER)
+  birthDate                  DateTime?
+  gender                     Gender?
+  lastEducation              String?
+  address                    String?      @db.Text
+  city                       String?
+  province                   String?
+  avatar                     String?
+  emailVerifiedAt            DateTime?
   emailVerificationTokenHash String?
   emailVerificationExpiresAt DateTime?
   passwordResetTokenHash     String?
   passwordResetExpiresAt     DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt                  DateTime     @default(now())
+  updatedAt                  DateTime     @updatedAt
 
-  company         Company?
-  jobApplications JobApplication[]
-  subscriptions   UserSubscription[]
-  companyReviews  CompanyReview[]
+  company           Company?
+  jobApplications   JobApplication[]
+  subscriptions     UserSubscription[]
+  companyReviews    CompanyReview[]
   assessmentResults SkillAssessmentResult[]
-  testResults     ApplicantTestResult[]
+  testResults       ApplicantTestResult[]
 
   @@map("users")
 }
@@ -133,7 +133,7 @@ model JobPosting {
   hasPreSelectionTest Boolean     @default(false)
   testDurationMinutes Int?
   tags                Json?
-  slug  String @unique
+  slug                String      @unique
   deadline            DateTime
   isPublished         Boolean     @default(false)
   deletedAt           DateTime?
@@ -301,7 +301,7 @@ model CompanyReview {
 
 model SkillAssessment {
   id              Int      @id @default(autoincrement())
-  skillName       String
+  skillName       String   @unique
   title           String
   description     String?  @db.Text
   passingScore    Int      @default(75)
