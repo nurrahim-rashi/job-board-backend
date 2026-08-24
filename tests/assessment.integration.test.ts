@@ -444,4 +444,306 @@ describe("POST /assessment", () => {
 
     expect(questionCount).toBe(25);
   });
+
+  it("Should allow developer to get assessment questions", async () => {
+    const developer = await createDeveloper();
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+    const token = createToken(developer);
+
+    await prisma.skillAssessmentQuestion.createMany({
+      data: [
+        {
+          assessmentId: assessment.id,
+          question: "Question number two",
+          options: {
+            A: "A",
+            B: "B",
+            C: "C",
+            D: "D",
+          },
+          correctAnswer: "B",
+          questionOrder: 2,
+        },
+        {
+          assessmentId: assessment.id,
+          question: "Question number one",
+          options: {
+            A: "A",
+            B: "B",
+            C: "C",
+            D: "D",
+          },
+          correctAnswer: "A",
+          questionOrder: 1,
+        },
+      ],
+    });
+
+    const response = await request(app)
+      .get(`/assessment/${assessment.id}/questions`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.message).toBe(
+      "Assessment questions retrieved successfully",
+    );
+
+    expect(response.body.data).toHaveLength(2);
+
+    expect(response.body.data[0]).toMatchObject({
+      assessmentId: assessment.id,
+      question: "Question number one",
+      correctAnswer: "A",
+      questionOrder: 1,
+    });
+
+    expect(response.body.data[1]).toMatchObject({
+      assessmentId: assessment.id,
+      question: "Question number two",
+      correctAnswer: "B",
+      questionOrder: 2,
+    });
+  });
+
+  it("Should allow developer to update an assessment question", async () => {
+    const developer = await createDeveloper();
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+    const token = createToken(developer);
+
+    const question = await prisma.skillAssessmentQuestion.create({
+      data: {
+        assessmentId: assessment.id,
+        question: "Old question",
+        options: {
+          A: "Old A",
+          B: "Old B",
+          C: "Old C",
+          D: "Old D",
+        },
+        correctAnswer: "A",
+        questionOrder: 1,
+      },
+    });
+
+    const response = await request(app)
+      .patch(`/assessment/${assessment.id}/questions/${question.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        question: "Updated question",
+        options: {
+          A: "Updated A",
+          B: "Updated B",
+          C: "Updated C",
+          D: "Updated D",
+        },
+        correctAnswer: "C",
+        questionOrder: 2,
+      });
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.message).toBe(
+      "Assessment question updated successfully",
+    );
+
+    expect(response.body.data).toMatchObject({
+      id: question.id,
+      assessmentId: assessment.id,
+      question: "Updated question",
+      correctAnswer: "C",
+      questionOrder: 2,
+    });
+
+    const updatedQuestion = await prisma.skillAssessmentQuestion.findUnique({
+      where: {
+        id: question.id,
+      },
+    });
+
+    expect(updatedQuestion).not.toBeNull();
+
+    expect(updatedQuestion).toMatchObject({
+      question: "Updated question",
+      correctAnswer: "C",
+      questionOrder: 2,
+    });
+  });
+
+  it("Should allow developer to delete an assessment question", async () => {
+    const developer = await createDeveloper();
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+    const token = createToken(developer);
+
+    const question = await prisma.skillAssessmentQuestion.create({
+      data: {
+        assessmentId: assessment.id,
+        question: "Question to delete",
+        options: {
+          A: "A",
+          B: "B",
+          C: "C",
+          D: "D",
+        },
+        correctAnswer: "A",
+        questionOrder: 1,
+      },
+    });
+
+    const response = await request(app)
+      .delete(`/assessment/${assessment.id}/questions/${question.id}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    console.log(response.status, response.body);
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.message).toBe(
+      "Assessment question deleted successfully",
+    );
+
+    const deletedQuestion = await prisma.skillAssessmentQuestion.findUnique({
+      where: {
+        id: question.id,
+      },
+    });
+
+    expect(deletedQuestion).toBeNull();
+  });
+
+  it("Should return 404 when updating a nonexistent assessment question", async () => {
+    const developer = await createDeveloper();
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+    const token = createToken(developer);
+
+    const response = await request(app)
+      .patch(`/assessment/${assessment.id}/questions/999999`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        question: "Updated question",
+      });
+
+    expect(response.status).toBe(404);
+
+    expect(response.body.message).toBe("Assessment question not found");
+  });
+
+  it("Should reject duplicate question order when updating a question", async () => {
+    const developer = await createDeveloper();
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+    const token = createToken(developer);
+
+    await prisma.skillAssessmentQuestion.create({
+      data: {
+        assessmentId: assessment.id,
+        question: "First question",
+        options: {
+          A: "A",
+          B: "B",
+          C: "C",
+          D: "D",
+        },
+        correctAnswer: "A",
+        questionOrder: 1,
+      },
+    });
+
+    const secondQuestion = await prisma.skillAssessmentQuestion.create({
+      data: {
+        assessmentId: assessment.id,
+        question: "Second question",
+        options: {
+          A: "A",
+          B: "B",
+          C: "C",
+          D: "D",
+        },
+        correctAnswer: "B",
+        questionOrder: 2,
+      },
+    });
+
+    const response = await request(app)
+      .patch(`/assessment/${assessment.id}/questions/${secondQuestion.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        questionOrder: 1,
+      });
+
+    expect(response.status).toBe(409);
+
+    expect(response.body.message).toBe(
+      "Question order already exists for this assessment",
+    );
+  });
+
+  it("Should reject invalid assessment question update data", async () => {
+    const developer = await createDeveloper();
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+    const token = createToken(developer);
+
+    const question = await prisma.skillAssessmentQuestion.create({
+      data: {
+        assessmentId: assessment.id,
+        question: "Original question",
+        options: {
+          A: "A",
+          B: "B",
+          C: "C",
+          D: "D",
+        },
+        correctAnswer: "A",
+        questionOrder: 1,
+      },
+    });
+
+    const response = await request(app)
+      .patch(`/assessment/${assessment.id}/questions/${question.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        question: "",
+        correctAnswer: "E",
+        questionOrder: 0,
+      });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("Should reject non-developer from managing assessment questions", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Test Job Seeker",
+        email: `jobseeker-manage-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    const assessment = await createTestAssessment();
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .get(`/assessment/${assessment.id}/questions`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(403);
+
+    expect(response.body.message).toBe(
+      "Only developer accounts can manage assessment questions",
+    );
+  });
 });
