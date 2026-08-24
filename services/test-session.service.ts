@@ -63,7 +63,7 @@ export const finalizeTest = async (testResultId: number) => {
 
   const score =
     totalQuestions > 0
-      ? Math.round((correctAnswer / totalQuestions) * 100 * 100) / 100
+      ? Math.round((correctAnswer / totalQuestions) * 100)
       : 0;
   const submittedAt = new Date();
 
