@@ -15,6 +15,16 @@ const createDeveloper = async () => {
   });
 };
 
+const createTestAssessment = () => {
+  return prisma.skillAssessment.create({
+    data: {
+      skillName: `TypeScript-${Date.now()}`,
+      title: "TypeScript Fundamentals",
+      description: "Test assessment",
+    },
+  });
+};
+
 let testUserId: number | undefined;
 
 const createToken = (user: { id: number; role: string }) => {
@@ -195,5 +205,243 @@ describe("POST /assessment", () => {
       .send(assessmentData);
 
     expect(secondResponse.status).toBe(409);
+  });
+
+  it("Should allow developer to create an assessment question", async () => {
+    const developer = await createDeveloper();
+
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+
+    const token = createToken(developer);
+
+    const questionData = {
+      question: "Which keyword is used to declare a constant in JavaScript?",
+      options: {
+        A: "var",
+        B: "let",
+        C: "const",
+        D: "static",
+      },
+      correctAnswer: "C",
+      questionOrder: 1,
+    };
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/questions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send(questionData);
+
+    expect(response.status).toBe(201);
+
+    expect(response.body.data).toMatchObject({
+      assessmentId: assessment.id,
+      question: questionData.question,
+      correctAnswer: "C",
+      questionOrder: 1,
+    });
+
+    const savedQuestion = await prisma.skillAssessmentQuestion.findFirst({
+      where: {
+        assessmentId: assessment.id,
+        questionOrder: 1,
+      },
+    });
+
+    expect(savedQuestion).not.toBeNull();
+
+    expect(savedQuestion).toMatchObject({
+      assessmentId: assessment.id,
+      question: questionData.question,
+      correctAnswer: "C",
+      questionOrder: 1,
+    });
+  });
+
+  it("Should reject non-developer from creating an assessment question", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Test Job Seeker",
+        email: `jobseeker-question-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    const assessment = await createTestAssessment();
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/questions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        question: "Which keyword declares a constant?",
+        options: {
+          A: "var",
+          B: "let",
+          C: "const",
+          D: "static",
+        },
+        correctAnswer: "C",
+        questionOrder: 1,
+      });
+
+    expect(response.status).toBe(403);
+  });
+
+  it("Should return 404 if assessment does not exist", async () => {
+    const developer = await createDeveloper();
+
+    testUserId = developer.id;
+
+    const token = createToken(developer);
+
+    const response = await request(app)
+      .post("/assessment/999999/questions")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        question: "Which keyword declares a constant?",
+        options: {
+          A: "var",
+          B: "let",
+          C: "const",
+          D: "static",
+        },
+        correctAnswer: "C",
+        questionOrder: 1,
+      });
+
+    expect(response.status).toBe(404);
+  });
+
+  it("Should reject duplicate question order in the same assessment", async () => {
+    const developer = await createDeveloper();
+
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+
+    const token = createToken(developer);
+
+    const firstQuestion = {
+      question: "Which keyword declares a constant?",
+      options: {
+        A: "var",
+        B: "let",
+        C: "const",
+        D: "static",
+      },
+      correctAnswer: "C",
+      questionOrder: 1,
+    };
+
+    const secondQuestion = {
+      question: "Which keyword declares a variable?",
+      options: {
+        A: "const",
+        B: "let",
+        C: "static",
+        D: "final",
+      },
+      correctAnswer: "B",
+      questionOrder: 1, // deliberately duplicated
+    };
+
+    const firstResponse = await request(app)
+      .post(`/assessment/${assessment.id}/questions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send(firstQuestion);
+
+    expect(firstResponse.status).toBe(201);
+
+    const secondResponse = await request(app)
+      .post(`/assessment/${assessment.id}/questions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send(secondQuestion);
+
+    expect(secondResponse.status).toBe(409);
+  });
+
+  it("Should reject invalid assessment question data", async () => {
+    const developer = await createDeveloper();
+
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+
+    const token = createToken(developer);
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/questions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        question: "",
+        options: {
+          A: "var",
+          B: "let",
+          C: "const",
+          D: "static",
+        },
+        correctAnswer: "E",
+        questionOrder: 0,
+      });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("Should reject creating more than 25 questions", async () => {
+    const developer = await createDeveloper();
+
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+
+    const token = createToken(developer);
+
+    // Create the maximum 25 questions directly in the DB
+    await prisma.skillAssessmentQuestion.createMany({
+      data: Array.from({ length: 25 }, (_, index) => ({
+        assessmentId: assessment.id,
+        question: `Test question ${index + 1}`,
+        options: {
+          A: "Option A",
+          B: "Option B",
+          C: "Option C",
+          D: "Option D",
+        },
+        correctAnswer: "A",
+        questionOrder: index + 1,
+      })),
+    });
+
+    // Try to create question #26 through the endpoint
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/questions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        question: "This should be question 26",
+        options: {
+          A: "Option A",
+          B: "Option B",
+          C: "Option C",
+          D: "Option D",
+        },
+        correctAnswer: "A",
+        questionOrder: 25,
+      });
+
+    expect(response.status).toBe(409);
+
+    const questionCount = await prisma.skillAssessmentQuestion.count({
+      where: {
+        assessmentId: assessment.id,
+      },
+    });
+
+    expect(questionCount).toBe(25);
   });
 });
