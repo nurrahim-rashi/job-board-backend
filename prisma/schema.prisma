@@ -128,8 +128,8 @@ model JobPosting {
   banner              String?
   category            JobCategory
   cityLocation        String
-  salaryMin           Decimal?    @db.Decimal(15, 2)
-  salaryMax           Decimal?    @db.Decimal(15, 2)
+  salaryMin           Int?
+  salaryMax           Int?
   hasPreSelectionTest Boolean     @default(false)
   testDurationMinutes Int?
   tags                Json?
@@ -155,7 +155,7 @@ model JobApplication {
   jobId           Int
   userId          Int
   cvFile          String
-  expectedSalary  Decimal?          @db.Decimal(15, 2)
+  expectedSalary  Int?
   status          ApplicationStatus @default(PENDING)
   rejectionReason String?           @db.Text
   createdAt       DateTime          @default(now())
@@ -194,7 +194,7 @@ model ApplicantTestResult {
   jobId            Int
   userId           Int
   jobApplicationId Int?      @unique
-  score            Decimal?  @db.Decimal(5, 2)
+  score            Int?
   startedAt        DateTime  @default(now())
   submittedAt      DateTime?
   createdAt        DateTime  @default(now())
@@ -246,7 +246,7 @@ model Interview {
 model Subscription {
   id             Int              @id @default(autoincrement())
   name           SubscriptionName @unique
-  price          Decimal          @db.Decimal(15, 2)
+  price          Int
   durationDays   Int              @default(30)
   featuresAccess Json
   createdAt      DateTime         @default(now())
@@ -282,7 +282,7 @@ model CompanyReview {
   companyId      Int
   userId         Int
   jobTitleHeld   String
-  salaryEstimate Decimal? @db.Decimal(15, 2)
+  salaryEstimate Int?
   ratingCulture  Int
   ratingWorkLife Int
   ratingFacility Int
