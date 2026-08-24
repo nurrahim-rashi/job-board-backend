@@ -15,6 +15,16 @@ const createDeveloper = async () => {
   });
 };
 
+const createTestAssessment = () => {
+  return prisma.skillAssessment.create({
+    data: {
+      skillName: `TypeScript-${Date.now()}`,
+      title: "TypeScript Fundamentals",
+      description: "Test assessment",
+    },
+  });
+};
+
 let testUserId: number | undefined;
 
 const createToken = (user: { id: number; role: string }) => {
@@ -195,5 +205,91 @@ describe("POST /assessment", () => {
       .send(assessmentData);
 
     expect(secondResponse.status).toBe(409);
+  });
+
+  it("Should allow developer to create an assessment question", async () => {
+    const developer = await createDeveloper();
+
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+
+    const token = createToken(developer);
+
+    const questionData = {
+      question: "Which keyword is used to declare a constant in JavaScript?",
+      options: {
+        A: "var",
+        B: "let",
+        C: "const",
+        D: "static",
+      },
+      correctAnswer: "C",
+      questionOrder: 1,
+    };
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/questions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send(questionData);
+
+    expect(response.status).toBe(201);
+
+    expect(response.body.data).toMatchObject({
+      assessmentId: assessment.id,
+      question: questionData.question,
+      correctAnswer: "C",
+      questionOrder: 1,
+    });
+
+    const savedQuestion = await prisma.skillAssessmentQuestion.findFirst({
+      where: {
+        assessmentId: assessment.id,
+        questionOrder: 1,
+      },
+    });
+
+    expect(savedQuestion).not.toBeNull();
+
+    expect(savedQuestion).toMatchObject({
+      assessmentId: assessment.id,
+      question: questionData.question,
+      correctAnswer: "C",
+      questionOrder: 1,
+    });
+  });
+
+  it("Should reject non-developer from creating an assessment question", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Test Job Seeker",
+        email: `jobseeker-question-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    const assessment = await createTestAssessment();
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/questions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        question: "Which keyword declares a constant?",
+        options: {
+          A: "var",
+          B: "let",
+          C: "const",
+          D: "static",
+        },
+        correctAnswer: "C",
+        questionOrder: 1,
+      });
+
+    expect(response.status).toBe(403);
   });
 });
