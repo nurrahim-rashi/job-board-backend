@@ -118,7 +118,7 @@ describe("POST /reviews/:companyId", () => {
       userId: jobSeeker.id,
       companyId: company.id,
       jobTitleHeld: validReviewData.jobTitleHeld,
-      salaryEstimate: "12000000",
+      salaryEstimate: 12000000,
       ratingCulture: validReviewData.ratingCulture,
       ratingWorkLife: validReviewData.ratingWorkLife,
       ratingFacility: validReviewData.ratingFacility,
