@@ -5,6 +5,7 @@ import { corsOptions } from "./config/cors.js";
 import { reviewRoutes } from "./routes/review.routes.js";
 import { authRoutes } from "./routes/auth.routes.js";
 import { preSelectionTestRoutes } from "./routes/pre-selection-test.routes.js";
+import { applicantTestRoutes } from "./routes/applicant-test.routes.js";
 import { assessmentRoutes } from "./routes/assessment.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 
@@ -21,6 +22,7 @@ app.use("/auth", authRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/assessment", assessmentRoutes);
 app.use("/jobs", preSelectionTestRoutes);
+app.use("/jobs", applicantTestRoutes);
 
 // errors
 app.use(errorHandler);

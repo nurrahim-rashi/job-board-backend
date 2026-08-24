@@ -10,7 +10,7 @@ export const jobOwnership = async (
   try {
     const slug = req.params.slug;
     if (typeof slug !== "string" || !slug) {
-      throw new ApiError("Lowongan tidak ditemukan", 404);
+      throw new ApiError("Job Posting not found", 404);
     }
   const job = await prisma.jobPosting.findFirst({
     where: {slug, deletedAt: null},
@@ -20,7 +20,7 @@ export const jobOwnership = async (
   })
 
   if (!job || job.company.userId !== req.user?.id) {
-  throw new ApiError("Lowongan tidak ditemukan", 404);
+  throw new ApiError("Job Posting not found", 404);
 }
 
 req.job = job;

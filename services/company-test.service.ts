@@ -1,7 +1,7 @@
 import type { JobPosting } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../utils/api-error.js";
-import { isTestLocked, parseOptions } from "../utils/test-score.util.js";
+import { isTestLocked, parseOptions } from "../utils/pre-selection-test.util.js";
 import {
   ActivationInput,
   SaveTestInput,
@@ -35,7 +35,7 @@ export const saveQuestionsService = async (jobId: number, input: SaveTestInput) 
   const locked = await isTestLocked(jobId);
   if (locked) {
     throw new ApiError(
-      "Soal tidak bisa diubah, karena sudah ada yang mengerjakan",
+      "Questions cannot be edited because someone has already answered it",
       409,
     );
   }
@@ -70,12 +70,12 @@ export const setActivationService = async (
   });
 
   if (total !== REQUIRED_QUESTION_COUNT) {
-    throw new ApiError("Test belum bisa diaktifkan, soal kurang dari 25", 400);
+    throw new ApiError("The test cannot be activated because the number of questions is less than 25", 400);
   }
 
   const duration = input.testDurationMinutes ?? job.testDurationMinutes;
   if (!duration) {
-    throw new ApiError("Durasi test wajib diisi", 400);
+    throw new ApiError("Test duration is required", 400);
   }
 
   return prisma.jobPosting.update({
@@ -88,7 +88,7 @@ export const deleteTestService = async (jobId: number) => {
   const locked = await isTestLocked(jobId);
   if (locked) {
     throw new ApiError(
-      "Soal tidak bisa dihapus, karena sudah ada yang mengerjakan soal tersebut",
+      "Questions cannot be deleted because someone has already started answering them",
       409,
     );
   }
@@ -100,5 +100,5 @@ export const deleteTestService = async (jobId: number) => {
       data: { hasPreSelectionTest: false, testDurationMinutes: null },
     }),
   ]);
-  return { message: "Soal test berhasil dihapus" };
+  return { message: "Test questions deleted successfully" };
 };
