@@ -39,19 +39,22 @@ export const createAssessmentQuestionService = async (
   userRole: UserRole,
   assessmentId: number,
   data: {
-    question: string,
+    question: string;
     options: {
-      A: string,
-      B: string,
-      C: string,
-      D: string,
+      A: string;
+      B: string;
+      C: string;
+      D: string;
     };
     correctAnswer: AnswerOption;
     questionOrder: number;
   },
 ) => {
   if (userRole !== "DEVELOPER") {
-    throw new ApiError("Only developer accounts can manage assessment questions", 403,)
+    throw new ApiError(
+      "Only developer accounts can manage assessment questions",
+      403,
+    );
   }
 
   const assessment = await prisma.skillAssessment.findUnique({
@@ -72,20 +75,28 @@ export const createAssessmentQuestionService = async (
   }
 
   if (assessment._count.questions >= 25) {
-    throw new ApiError("Assessment already contains the maximum of 25 questions", 409);
+    throw new ApiError(
+      "Assessment already contains the maximum of 25 questions",
+      409,
+    );
   }
 
-  const existingQuestionOrder = await prisma.skillAssessmentQuestion.findUnique({
-    where: {
-      assessmentId_questionOrder: {
-        assessmentId,
-        questionOrder: data.questionOrder,
+  const existingQuestionOrder = await prisma.skillAssessmentQuestion.findUnique(
+    {
+      where: {
+        assessmentId_questionOrder: {
+          assessmentId,
+          questionOrder: data.questionOrder,
+        },
       },
     },
-  });
+  );
 
   if (existingQuestionOrder) {
-    throw new ApiError("Question order already exists for this assessment", 409);
+    throw new ApiError(
+      "Question order already exists for this assessment",
+      409,
+    );
   }
 
   return prisma.skillAssessmentQuestion.create({
@@ -97,4 +108,133 @@ export const createAssessmentQuestionService = async (
       questionOrder: data.questionOrder,
     },
   });
+};
+
+export const getAssessmentQuestionsService = async (
+  userRole: UserRole,
+  assessmentId: number,
+) => {
+  if (userRole !== "DEVELOPER") {
+    throw new ApiError(
+      "Only developer accounts can manage assessment questions",
+      403,
+    );
+  }
+
+  const assessment = await prisma.skillAssessment.findUnique({
+    where: {
+      id: assessmentId,
+    },
+  });
+
+  if (!assessment) {
+    throw new ApiError("Assessment not found", 404);
+  }
+
+  return prisma.skillAssessmentQuestion.findMany({
+    where: {
+      assessmentId,
+    },
+    orderBy: {
+      questionOrder: "asc",
+    },
+  });
+};
+
+export const updateAssessmentQuestionService = async (
+  userRole: UserRole,
+  assessmentId: number,
+  questionId: number,
+  data: {
+    question?: string;
+    options?: {
+      A: string;
+      B: string;
+      C: string;
+      D: string;
+    };
+    correctAnswer?: AnswerOption;
+    questionOrder?: number;
+  },
+) => {
+  if (userRole !== "DEVELOPER") {
+    throw new ApiError(
+      "Only developer accounts can manage assessment questions",
+      403,
+    );
+  }
+
+  const question = await prisma.skillAssessmentQuestion.findFirst({
+    where: {
+      id: questionId,
+      assessmentId,
+    },
+  });
+
+  if (!question) {
+    throw new ApiError("Assessment question not found", 404);
+  }
+
+  if (
+    data.questionOrder !== undefined &&
+    data.questionOrder !== question.questionOrder
+  ) {
+    const duplicateOrder = await prisma.skillAssessmentQuestion.findFirst({
+      where: {
+        assessmentId,
+        questionOrder: data.questionOrder,
+        NOT: {
+          id: questionId,
+        },
+      },
+    });
+
+    if (duplicateOrder) {
+      throw new ApiError(
+        "Question order already exists for this assessment",
+        409,
+      );
+    }
+  }
+
+  return prisma.skillAssessmentQuestion.update({
+    where: {
+      id: questionId,
+    },
+    data,
+  });
+};
+
+export const deleteAssessmentQuestionService = async (
+  userRole: UserRole,
+  assessmentId: number,
+  questionId: number,
+) => {
+  if (userRole !== "DEVELOPER") {
+    throw new ApiError(
+      "Only developer accounts can manage assessment questions",
+      403,
+    );
+  }
+
+  const question = await prisma.skillAssessmentQuestion.findFirst({
+    where: {
+      id: questionId,
+      assessmentId,
+    },
+  });
+
+  if (!question) {
+    throw new ApiError("Assessment question not found", 404);
+  }
+
+  await prisma.skillAssessmentQuestion.delete({
+    where: {
+      id: questionId,
+    },
+  });
+
+  return {
+    message: "Assessment question deleted successfully",
+  };
 };
