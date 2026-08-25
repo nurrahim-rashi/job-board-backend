@@ -1,7 +1,7 @@
-import { prisma } from "../lib/prisma.js";
-import type { Prisma } from "../generated/prisma/client.js";
-import { ApiError } from "../utils/api-error.js";
-import { getRemainingSeconds, isExpired, parseOptions } from "../utils/pre-selection-test.util.js";
+import { prisma } from "../../lib/prisma.js";
+import type { Prisma } from "../../generated/prisma/client.js";
+import { ApiError } from "../../utils/api-error.js";
+import { getRemainingSeconds, isExpired, parseOptions } from "../../utils/pre-selection-test.util.js";
 import { finalizeTest } from "./test-session.service.js";
 
 type ApplicationWithJob = Prisma.JobApplicationGetPayload<{

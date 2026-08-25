@@ -1,8 +1,8 @@
-import type { Prisma } from "../generated/prisma/client.js";
-import { prisma } from "../lib/prisma.js";
-import { ApiError } from "../utils/api-error.js";
-import { getRemainingSeconds, isExpired } from "../utils/pre-selection-test.util.js";
-import { SaveAnswerInput } from "../validators/pre-selection-test.validator.js";
+import type { Prisma } from "../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
+import { ApiError } from "../../utils/api-error.js";
+import { getRemainingSeconds, isExpired } from "../../utils/pre-selection-test.util.js";
+import { SaveAnswerInput } from "../../validators/pre-selection-test.validator.js";
 import { finalizeTest, getActiveSession } from "./test-session.service.js";
 
 type ApplicationWithJob = Prisma.JobApplicationGetPayload<{

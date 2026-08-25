@@ -1,11 +1,11 @@
-import type { JobPosting } from "../generated/prisma/client.js";
-import { prisma } from "../lib/prisma.js";
-import { ApiError } from "../utils/api-error.js";
-import { isTestLocked, parseOptions } from "../utils/pre-selection-test.util.js";
+import type { JobPosting } from "../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
+import { ApiError } from "../../utils/api-error.js";
+import { isTestLocked, parseOptions } from "../../utils/pre-selection-test.util.js";
 import {
   ActivationInput,
   SaveTestInput,
-} from "../validators/pre-selection-test.validator.js";
+} from "../../validators/pre-selection-test.validator.js";
 
 const REQUIRED_QUESTION_COUNT = 25;
 

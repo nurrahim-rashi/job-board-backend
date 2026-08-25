@@ -1,7 +1,7 @@
-import type { JobPosting } from "../generated/prisma/client.js";
-import { prisma } from "../lib/prisma.js";
-import { ApiError } from "../utils/api-error.js";
-import { parseOptions } from "../utils/pre-selection-test.util.js";
+import type { JobPosting } from "../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
+import { ApiError } from "../../utils/api-error.js";
+import { parseOptions } from "../../utils/pre-selection-test.util.js";
 
 export const getTestResultService = async (
   job: JobPosting,

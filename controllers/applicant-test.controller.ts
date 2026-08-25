@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
-import { saveAnswerService } from "../services/save-answer.service.js";
+import { saveAnswerService } from "../services/pre-selection-test/save-answer.service.js";
 import { SaveAnswerInput } from "../validators/pre-selection-test.validator.js";
-import { submitTestService } from "../services/submit-test.service.js";
+import { submitTestService } from "../services/pre-selection-test/submit-test.service.js";
 
 
 

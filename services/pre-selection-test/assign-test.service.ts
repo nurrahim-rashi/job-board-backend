@@ -1,8 +1,7 @@
-import { JobPosting } from "../generated/prisma/client.js";
-import { ApiError } from "../utils/api-error.js";
-import { AssignTestInput } from "../validators/pre-selection-test.validator.js";
-import { prisma } from "../lib/prisma.js";
-import { count } from "node:console";
+import { JobPosting } from "../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
+import { ApiError } from "../../utils/api-error.js";
+import { AssignTestInput } from "../../validators/pre-selection-test.validator.js";
 
 export const assignTestService = async (
   job: JobPosting,
