@@ -4,12 +4,12 @@ import {
   getTestService,
   saveQuestionsService,
   setActivationService,
-} from "../services/company-test.service.js";
+} from "../services/pre-selection-test/company-test.service.js";
 import {
   ActivationInput,
   AssignTestInput,
 } from "../validators/pre-selection-test.validator.js";
-import { assignTestService } from "../services/assign-test.service.js";
+import { assignTestService } from "../services/pre-selection-test/assign-test.service.js";
 
 export const getTestController = async (
   req: Request,

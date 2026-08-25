@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { ApiError } from "../utils/api-error.js";
-import { getTestResultService } from "../services/test-result.service.js";
+import { getTestResultService } from "../services/pre-selection-test/test-result.service.js";
 
 export const getTestResultController = async (
   req: Request,

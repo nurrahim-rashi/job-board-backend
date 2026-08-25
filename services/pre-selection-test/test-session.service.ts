@@ -1,6 +1,6 @@
-import { Prisma } from "../generated/prisma/client.js";
-import { prisma } from "../lib/prisma.js";
-import { ApiError } from "../utils/api-error.js";
+import { Prisma } from "../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
+import { ApiError } from "../../utils/api-error.js";
 
 type ApplicationWithJob = Prisma.JobApplicationGetPayload<{
   include: { job: true };
