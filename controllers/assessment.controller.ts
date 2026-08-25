@@ -5,6 +5,8 @@ import {
   getAssessmentQuestionsService,
   updateAssessmentQuestionService,
   deleteAssessmentQuestionService,
+  getAvailableAssessmentService,
+  getAssessmentDiscoveryDetailService,
 } from "../services/assessment.service.js";
 
 export const createAssessmentController = async (
@@ -91,4 +93,37 @@ export const deleteAssessmentQuestionController = async (
   );
 
   return res.status(200).json(result);
+};
+
+export const getAvailableAssessmentsController = async (
+  req: Request,
+  res: Response,
+) => {
+  const userId = res.locals.user.id;
+
+  const assessments = await getAvailableAssessmentService(userId);
+
+  return res.status(200).json({
+    message: "Available assessments retrieved successfully",
+    data: assessments,
+  });
+};
+
+export const getAssessmentDiscoveryDetailController = async (
+  req: Request,
+  res: Response,
+) => {
+  const userId = res.locals.user.id;
+
+  const assessmentId = Number(req.params.assessmentId);
+
+  const assessment = await getAssessmentDiscoveryDetailService(
+    userId,
+    assessmentId,
+  );
+
+  return res.status(200).json({
+    message: "Assessment detail retrieved successfully",
+    data: assessment,
+  });
 };
