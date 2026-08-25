@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../utils/api-error.js";
 import { AnswerOption, UserRole } from "../generated/prisma/enums.js";
+import { checkActiveSubscription } from "../helpers/subscription.helper.js";
 
 export const createAssessmentService = async (
   userRole: UserRole,
@@ -237,4 +238,58 @@ export const deleteAssessmentQuestionService = async (
   return {
     message: "Assessment question deleted successfully",
   };
+};
+
+export const getAvailableAssessmentService = async (userId: number) => {
+  await checkActiveSubscription(userId);
+
+  return prisma.skillAssessment.findMany({
+    select: {
+      id: true,
+      skillName: true,
+      title: true,
+      description: true,
+      passingScore: true,
+      durationMinutes: true,
+      questionCount: true,
+      createdAt: true,
+      _count: {
+        select: {
+          questions: true,
+        },
+      },
+    },
+    orderBy: {
+      skillName: "asc",
+    },
+  });
+};
+
+export const getAssessmentDiscoveryDetailService = async (
+  userId: number,
+  assessmentId: number,
+) => {
+  await checkActiveSubscription(userId);
+
+  const assessment = await prisma.skillAssessment.findUnique({
+    where: {
+      id: assessmentId,
+    },
+    select: {
+      id: true,
+      skillName: true,
+      title: true,
+      description: true,
+      passingScore: true,
+      durationMinutes: true,
+      questionCount: true,
+      createdAt: true,
+    },
+  });
+
+  if (!assessment) {
+    throw new ApiError("Assessment not found", 404);
+  }
+
+  return assessment;
 };
