@@ -5,6 +5,7 @@ import {
   createAssessmentSchema,
   createAssessmentQuestionSchema,
   updateAssessmentQuestionSchema,
+  submitAssessmentSchema,
 } from "../validators/assessment.validator.js";
 import {
   createAssessmentController,
@@ -15,6 +16,7 @@ import {
   getAvailableAssessmentsController,
   getAssessmentDiscoveryDetailController,
   startAssessmentController,
+  submitAssessmentController,
 } from "../controllers/assessment.controller.js";
 
 export const assessmentRoutes = express.Router();
@@ -38,6 +40,13 @@ assessmentRoutes.post(
   validate(createAssessmentQuestionSchema),
   createAssessmentQuestionController,
 );
+
+assessmentRoutes.post(
+  "/:assessmentId/submit",
+  verifyToken(process.env.JWT_SECRET!),
+  validate(submitAssessmentSchema),
+  submitAssessmentController,
+)
 
 assessmentRoutes.get(
   "/:assessmentId/questions",
