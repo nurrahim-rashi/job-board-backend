@@ -293,3 +293,94 @@ export const getAssessmentDiscoveryDetailService = async (
 
   return assessment;
 };
+
+export const startAssessmentService = async (
+  userId: number,
+  assessmentId: number,
+) => {
+  await checkActiveSubscription(userId);
+
+  const assessment = await prisma.skillAssessment.findUnique({
+    where: {
+      id: assessmentId,
+    },
+    include: {
+      questions: {
+        orderBy: {
+          questionOrder: "asc",
+        },
+      },
+    },
+  });
+
+  if (!assessment) {
+    throw new ApiError("Assessment not found", 404);
+  }
+
+  if(assessment.questions.length !== 25) {
+    throw new ApiError(
+      "Assessment must contain exactly 25 questions before it can be started", 409
+    )
+  }
+
+  const activeAttempt = await prisma.skillAssessmentResult.findFirst({
+    where: {
+      userId,
+      assessmentId,
+      completedAt: null,
+    },
+    orderBy: {
+      startedAt: "desc",
+    },
+  });
+
+  if(activeAttempt) {
+    const activeAttemptExpiresAt = new Date(
+      activeAttempt.startedAt.getTime() + assessment.durationMinutes * 60 * 1000,
+    );
+
+    if (activeAttemptExpiresAt > new Date()) {
+      throw new ApiError(
+        "You already have an active attempt for this assessment",
+        409,
+      );
+    }
+  }
+
+  const startedAt = new Date();
+
+  const result = await prisma.skillAssessmentResult.create({
+    data: {
+      userId,
+      assessmentId,
+      score: 0,
+      isPassed: false,
+      startedAt,
+    },
+  });
+
+  const questions = assessment.questions.map((question) => ({
+    id: question.id,
+    question: question.question,
+    options: question.options,
+    questionOrder: question.questionOrder,
+  }));
+
+  const expiresAt = new Date(
+    startedAt.getTime() + assessment.durationMinutes * 60 * 1000,
+  );
+
+  return {
+    resultId: result.id,
+    assessment: {
+      id: assessment.id,
+      skillName: assessment.skillName,
+      title: assessment.title,
+      durationMinutes: assessment.durationMinutes,
+      questionCount: assessment.questionCount,
+    },
+    startedAt,
+    expiresAt,
+    questions,
+  };
+};

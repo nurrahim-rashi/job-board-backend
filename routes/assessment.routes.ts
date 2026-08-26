@@ -14,6 +14,7 @@ import {
   deleteAssessmentQuestionController,
   getAvailableAssessmentsController,
   getAssessmentDiscoveryDetailController,
+  startAssessmentController,
 } from "../controllers/assessment.controller.js";
 
 export const assessmentRoutes = express.Router();
@@ -23,6 +24,12 @@ assessmentRoutes.post(
   verifyToken(process.env.JWT_SECRET!),
   validate(createAssessmentSchema),
   createAssessmentController,
+);
+
+assessmentRoutes.post(
+  "/:assessmentId/start",
+  verifyToken(process.env.JWT_SECRET!),
+  startAssessmentController,
 );
 
 assessmentRoutes.post(
