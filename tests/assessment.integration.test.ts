@@ -65,6 +65,23 @@ const createActiveSubscription = async (userId: number) => {
   });
 };
 
+const create25Questions = async (assessmentId: number) => {
+  await prisma.skillAssessmentQuestion.createMany({
+    data: Array.from({ length: 25 }, (_, index) => ({
+      assessmentId,
+      question: `Assessment question ${index + 1}`,
+      options: {
+        A: "Option A",
+        B: "Option B",
+        C: "Option C",
+        D: "Option D",
+      },
+      correctAnswer: "A",
+      questionOrder: index + 1,
+    })),
+  });
+};
+
 describe("POST /assessment", () => {
   afterEach(async () => {
     await prisma.skillAssessmentQuestion.deleteMany();
@@ -78,6 +95,12 @@ describe("POST /assessment", () => {
     });
 
     if (testUserId) {
+      await prisma.userSubscription.deleteMany({
+        where: {
+          userId: testUserId,
+        },
+      });
+
       await prisma.user.deleteMany({
         where: {
           id: testUserId,
@@ -911,5 +934,210 @@ describe("POST /assessment", () => {
     expect(response.status).toBe(404);
 
     expect(response.body.message).toBe("Assessment not found");
+  });
+
+  it("Should allow active subscriber to start an assessment", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Assessment Test User",
+        email: `start-assessment-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    await createActiveSubscription(jobSeeker.id);
+
+    const assessment = await createTestAssessment();
+
+    await create25Questions(assessment.id);
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/start`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(201);
+
+    expect(response.body.message).toBe("Assessment started successfully");
+
+    expect(response.body.data.resultId).toBeDefined();
+    expect(response.body.data.startedAt).toBeDefined();
+    expect(response.body.data.expiresAt).toBeDefined();
+
+    expect(response.body.data.assessment).toMatchObject({
+      id: assessment.id,
+      skillName: assessment.skillName,
+      title: assessment.title,
+      durationMinutes: 30,
+      questionCount: 25,
+    });
+
+    expect(response.body.data.questions).toHaveLength(25);
+
+    expect(response.body.data.questions[0]).toMatchObject({
+      questionOrder: 1,
+      question: "Assessment question 1",
+    });
+
+    // Security check: answers must NEVER be exposed.
+    for (const question of response.body.data.questions) {
+      expect(question).not.toHaveProperty("correctAnswer");
+    }
+
+    // Verify the attempt was persisted.
+    const savedResult = await prisma.skillAssessmentResult.findUnique({
+      where: {
+        id: response.body.data.resultId,
+      },
+    });
+
+    expect(savedResult).not.toBeNull();
+
+    expect(savedResult).toMatchObject({
+      userId: jobSeeker.id,
+      assessmentId: assessment.id,
+      score: 0,
+      isPassed: false,
+      completedAt: null,
+    });
+  });
+
+  it("Should reject starting assessment without active subscription", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Unsubscribed Assessment User",
+        email: `start-no-sub-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    const assessment = await createTestAssessment();
+
+    await create25Questions(assessment.id);
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/start`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(403);
+
+    expect(response.body.message).toBe(
+      "Active subscription is required to access skill assessments",
+    );
+  });
+
+  it("Should return 404 when starting a nonexistent assessment", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Subscribed Missing Assessment User",
+        email: `start-missing-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    await createActiveSubscription(jobSeeker.id);
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .post("/assessment/999999/start")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(404);
+
+    expect(response.body.message).toBe("Assessment not found");
+  });
+
+  it("Should reject starting assessment with fewer than 25 questions", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Incomplete Assessment User",
+        email: `incomplete-assessment-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    await createActiveSubscription(jobSeeker.id);
+
+    const assessment = await createTestAssessment();
+
+    await prisma.skillAssessmentQuestion.createMany({
+      data: Array.from({ length: 24 }, (_, index) => ({
+        assessmentId: assessment.id,
+        question: `Assessment question ${index + 1}`,
+        options: {
+          A: "Option A",
+          B: "Option B",
+          C: "Option C",
+          D: "Option D",
+        },
+        correctAnswer: "A",
+        questionOrder: index + 1,
+      })),
+    });
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/start`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(409);
+
+    expect(response.body.message).toBe(
+      "Assessment must contain exactly 25 questions before it can be started",
+    );
+  });
+
+  it("Should reject starting a new assessment while an active attempt exists", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Active Attempt User",
+        email: `active-attempt-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    await createActiveSubscription(jobSeeker.id);
+
+    const assessment = await createTestAssessment();
+
+    await create25Questions(assessment.id);
+
+    const token = createToken(jobSeeker);
+
+    const firstResponse = await request(app)
+      .post(`/assessment/${assessment.id}/start`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(firstResponse.status).toBe(201);
+
+    const secondResponse = await request(app)
+      .post(`/assessment/${assessment.id}/start`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(secondResponse.status).toBe(409);
+
+    expect(secondResponse.body.message).toBe(
+      "You already have an active attempt for this assessment",
+    );
   });
 });

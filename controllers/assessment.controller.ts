@@ -7,6 +7,7 @@ import {
   deleteAssessmentQuestionService,
   getAvailableAssessmentService,
   getAssessmentDiscoveryDetailService,
+  startAssessmentService,
 } from "../services/assessment.service.js";
 
 export const createAssessmentController = async (
@@ -125,5 +126,23 @@ export const getAssessmentDiscoveryDetailController = async (
   return res.status(200).json({
     message: "Assessment detail retrieved successfully",
     data: assessment,
+  });
+};
+
+export const startAssessmentController = async (
+  req: Request,
+  res: Response,
+) => {
+  const userId = res.locals.user.id;
+  const assessmentId = Number(req.params.assessmentId);
+
+  const result = await startAssessmentService(
+    userId,
+    assessmentId,
+  );
+
+  return res.status(201).json({
+    message: "Assessment started successfully",
+    data: result,
   });
 };
