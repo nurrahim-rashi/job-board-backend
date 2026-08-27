@@ -8,6 +8,7 @@ import { preSelectionTestRoutes } from "./routes/pre-selection-test.routes.js";
 import { applicantTestRoutes } from "./routes/applicant-test.routes.js";
 import { assessmentRoutes } from "./routes/assessment.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
+import { jobPostingRoutes } from "./routes/job-posting.routes.js";
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use("/reviews", reviewRoutes);
 app.use("/assessment", assessmentRoutes);
 app.use("/jobs", preSelectionTestRoutes);
 app.use("/jobs", applicantTestRoutes);
+app.use("/jobs", jobPostingRoutes);
 
 // errors
 app.use(errorHandler);
