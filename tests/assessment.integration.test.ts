@@ -84,6 +84,7 @@ const create25Questions = async (assessmentId: number) => {
 
 describe("POST /assessment", () => {
   afterEach(async () => {
+    await prisma.skillAssessmentAnswer.deleteMany();
     await prisma.skillAssessmentQuestion.deleteMany();
     await prisma.skillAssessmentResult.deleteMany();
     await prisma.skillAssessment.deleteMany();
@@ -1138,6 +1139,446 @@ describe("POST /assessment", () => {
 
     expect(secondResponse.body.message).toBe(
       "You already have an active attempt for this assessment",
+    );
+  });
+
+  it("Should submit assessment successfully and pass", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Passing Assessment User",
+        email: `passing-assessment-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    await createActiveSubscription(jobSeeker.id);
+
+    const assessment = await createTestAssessment();
+
+    await create25Questions(assessment.id);
+
+    const token = createToken(jobSeeker);
+
+    const startResponse = await request(app)
+      .post(`/assessment/${assessment.id}/start`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(startResponse.status).toBe(201);
+
+    const resultId = startResponse.body.data.resultId;
+
+    const questions = await prisma.skillAssessmentQuestion.findMany({
+      where: {
+        assessmentId: assessment.id,
+      },
+      orderBy: {
+        questionOrder: "asc",
+      },
+    });
+
+    const answers = questions.map((question) => ({
+      questionId: question.id,
+      answer: question.correctAnswer,
+    }));
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/submit`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        resultId,
+        answers,
+      });
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.message).toBe("Assessment submitted successfully");
+
+    expect(response.body.data).toMatchObject({
+      resultId,
+      score: 100,
+      isPassed: true,
+      correctAnswers: 25,
+      totalQuestions: 25,
+    });
+
+    expect(response.body.data.badgeName).toBe(
+      `${assessment.skillName} Skill Badge`,
+    );
+
+    const savedResult = await prisma.skillAssessmentResult.findUnique({
+      where: {
+        id: resultId,
+      },
+    });
+
+    expect(savedResult).not.toBeNull();
+
+    expect(savedResult).toMatchObject({
+      score: 100,
+      isPassed: true,
+      badgeName: `${assessment.skillName} Skill Badge`,
+    });
+
+    expect(savedResult?.completedAt).not.toBeNull();
+
+    const savedAnswers = await prisma.skillAssessmentAnswer.findMany({
+      where: {
+        resultId,
+      },
+    });
+
+    expect(savedAnswers).toHaveLength(25);
+
+    expect(savedAnswers.every((answer) => answer.isCorrect)).toBe(true);
+  });
+
+  it("Should submit assessment successfully and fail", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Failing Assessment User",
+        email: `failing-assessment-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    await createActiveSubscription(jobSeeker.id);
+
+    const assessment = await createTestAssessment();
+
+    await create25Questions(assessment.id);
+
+    const token = createToken(jobSeeker);
+
+    const startResponse = await request(app)
+      .post(`/assessment/${assessment.id}/start`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(startResponse.status).toBe(201);
+
+    const resultId = startResponse.body.data.resultId;
+
+    const questions = await prisma.skillAssessmentQuestion.findMany({
+      where: {
+        assessmentId: assessment.id,
+      },
+      orderBy: {
+        questionOrder: "asc",
+      },
+    });
+
+    const answers = questions.map((question, index) => ({
+      questionId: question.id,
+
+      // 18 correct, 7 wrong
+      answer: index < 18 ? question.correctAnswer : "B",
+    }));
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/submit`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        resultId,
+        answers,
+      });
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.data).toMatchObject({
+      resultId,
+      score: 72,
+      isPassed: false,
+      correctAnswers: 18,
+      totalQuestions: 25,
+      badgeName: null,
+    });
+
+    const savedResult = await prisma.skillAssessmentResult.findUnique({
+      where: {
+        id: resultId,
+      },
+    });
+
+    expect(savedResult).toMatchObject({
+      score: 72,
+      isPassed: false,
+      badgeName: null,
+    });
+
+    expect(savedResult?.completedAt).not.toBeNull();
+  });
+
+  it("Should reject submission if assessment time has expired", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Expired Assessment User",
+        email: `expired-assessment-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    await createActiveSubscription(jobSeeker.id);
+
+    const assessment = await createTestAssessment();
+
+    await create25Questions(assessment.id);
+
+    const token = createToken(jobSeeker);
+
+    const startResponse = await request(app)
+      .post(`/assessment/${assessment.id}/start`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(startResponse.status).toBe(201);
+
+    const resultId = startResponse.body.data.resultId;
+
+    await prisma.skillAssessmentResult.update({
+      where: {
+        id: resultId,
+      },
+      data: {
+        startedAt: new Date(Date.now() - 31 * 60 * 1000),
+      },
+    });
+
+    const questions = await prisma.skillAssessmentQuestion.findMany({
+      where: {
+        assessmentId: assessment.id,
+      },
+      orderBy: {
+        questionOrder: "asc",
+      },
+    });
+
+    const answers = questions.map((question) => ({
+      questionId: question.id,
+      answer: question.correctAnswer,
+    }));
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/submit`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        resultId,
+        answers,
+      });
+
+    expect(response.status).toBe(409);
+
+    expect(response.body.message).toBe("Assessment time has expired");
+  });
+
+  it("Should reject submitting an assessment that was already completed", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Completed Assessment User",
+        email: `completed-assessment-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    await createActiveSubscription(jobSeeker.id);
+
+    const assessment = await createTestAssessment();
+
+    await create25Questions(assessment.id);
+
+    const token = createToken(jobSeeker);
+
+    const startResponse = await request(app)
+      .post(`/assessment/${assessment.id}/start`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(startResponse.status).toBe(201);
+
+    const resultId = startResponse.body.data.resultId;
+
+    const questions = await prisma.skillAssessmentQuestion.findMany({
+      where: {
+        assessmentId: assessment.id,
+      },
+      orderBy: {
+        questionOrder: "asc",
+      },
+    });
+
+    const answers = questions.map((question) => ({
+      questionId: question.id,
+      answer: question.correctAnswer,
+    }));
+
+    const firstSubmit = await request(app)
+      .post(`/assessment/${assessment.id}/submit`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        resultId,
+        answers,
+      });
+
+    expect(firstSubmit.status).toBe(200);
+
+    const secondSubmit = await request(app)
+      .post(`/assessment/${assessment.id}/submit`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        resultId,
+        answers,
+      });
+
+    expect(secondSubmit.status).toBe(409);
+
+    expect(secondSubmit.body.message).toBe(
+      "Assessment has already been submitted",
+    );
+  });
+
+  it("Should reject submission with incomplete answers", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Incomplete Submission User",
+        email: `incomplete-submit-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    await createActiveSubscription(jobSeeker.id);
+
+    const assessment = await createTestAssessment();
+
+    await create25Questions(assessment.id);
+
+    const token = createToken(jobSeeker);
+
+    const startResponse = await request(app)
+      .post(`/assessment/${assessment.id}/start`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(startResponse.status).toBe(201);
+
+    const resultId = startResponse.body.data.resultId;
+
+    const questions = await prisma.skillAssessmentQuestion.findMany({
+      where: {
+        assessmentId: assessment.id,
+      },
+      orderBy: {
+        questionOrder: "asc",
+      },
+    });
+
+    const answers = questions.slice(0, 24).map((question) => ({
+      questionId: question.id,
+      answer: question.correctAnswer,
+    }));
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/submit`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        resultId,
+        answers,
+      });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("Should reject answers containing questions from another assessment", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Wrong Question Assessment User",
+        email: `wrong-question-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    await createActiveSubscription(jobSeeker.id);
+
+    const assessment = await createTestAssessment();
+    await create25Questions(assessment.id);
+
+    const otherAssessment = await prisma.skillAssessment.create({
+      data: {
+        skillName: `OtherSkill-${Date.now()}`,
+        title: "Other Assessment",
+        description: "Another assessment",
+      },
+    });
+
+    const otherQuestion = await prisma.skillAssessmentQuestion.create({
+      data: {
+        assessmentId: otherAssessment.id,
+        question: "Question from another assessment",
+        options: {
+          A: "A",
+          B: "B",
+          C: "C",
+          D: "D",
+        },
+        correctAnswer: "A",
+        questionOrder: 1,
+      },
+    });
+
+    const token = createToken(jobSeeker);
+
+    const startResponse = await request(app)
+      .post(`/assessment/${assessment.id}/start`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(startResponse.status).toBe(201);
+
+    const resultId = startResponse.body.data.resultId;
+
+    const questions = await prisma.skillAssessmentQuestion.findMany({
+      where: {
+        assessmentId: assessment.id,
+      },
+      orderBy: {
+        questionOrder: "asc",
+      },
+    });
+
+    const answers = questions.map((question) => ({
+      questionId: question.id,
+      answer: question.correctAnswer,
+    }));
+
+    // Replace one valid question with one from another assessment
+    answers[0] = {
+      questionId: otherQuestion.id,
+      answer: otherQuestion.correctAnswer,
+    };
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/submit`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        resultId,
+        answers,
+      });
+
+    expect(response.status).toBe(400);
+
+    expect(response.body.message).toBe(
+      "One or more questions do not belong to this assessment",
     );
   });
 });

@@ -8,6 +8,7 @@ import {
   getAvailableAssessmentService,
   getAssessmentDiscoveryDetailService,
   startAssessmentService,
+  submitAssessmentService,
 } from "../services/assessment.service.js";
 
 export const createAssessmentController = async (
@@ -143,6 +144,28 @@ export const startAssessmentController = async (
 
   return res.status(201).json({
     message: "Assessment started successfully",
+    data: result,
+  });
+};
+
+export const submitAssessmentController = async (
+  req: Request,
+  res: Response,
+) => {
+  const userId = res.locals.user.id;
+  const assessmentId = Number(req.params.assessmentId);
+
+  const {resultId, answers} = req.body;
+
+  const result = await submitAssessmentService(
+    userId,
+    assessmentId,
+    resultId,
+    answers,
+  );
+
+  return res.status(200).json({
+    message: "Assessment submitted successfully",
     data: result,
   });
 };

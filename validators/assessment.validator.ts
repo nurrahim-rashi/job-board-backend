@@ -72,3 +72,29 @@ export const updateAssessmentQuestionSchema = z.object({
 export type UpdateAssessmentQuestionSchema = z.infer<
   typeof updateAssessmentQuestionSchema
 >;
+
+export const submitAssessmentSchema = z.object({
+  resultId: z
+    .number({
+      message: "Result ID is required",
+    })
+    .int("Result ID must be an integer")
+    .positive("Result ID must be positive"),
+
+  answers: z
+    .array(
+      z.object({
+        questionId: z
+          .number({
+            message: "Question ID is required",
+          })
+          .int("Question ID must be an integer")
+          .positive("Question ID must be positive"),
+
+        answer: z.enum(["A", "B", "C", "D"]),
+      }),
+    )
+    .length(25, "Exactly 25 answers are required"),
+});
+
+export type SubmitAssessmentSchema = z.infer<typeof submitAssessmentSchema>;

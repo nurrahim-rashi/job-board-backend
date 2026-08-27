@@ -2,6 +2,12 @@ import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../utils/api-error.js";
 import { AnswerOption, UserRole } from "../generated/prisma/enums.js";
 import { checkActiveSubscription } from "../helpers/subscription.helper.js";
+import {
+  getAssessmentAttempt,
+  processAssessmentAnswers,
+  validateAssessmentDeadline,
+  validateSubmittedAnswers,
+} from "../helpers/assessment.helper.js";
 
 export const createAssessmentService = async (
   userRole: UserRole,
@@ -317,10 +323,11 @@ export const startAssessmentService = async (
     throw new ApiError("Assessment not found", 404);
   }
 
-  if(assessment.questions.length !== 25) {
+  if (assessment.questions.length !== 25) {
     throw new ApiError(
-      "Assessment must contain exactly 25 questions before it can be started", 409
-    )
+      "Assessment must contain exactly 25 questions before it can be started",
+      409,
+    );
   }
 
   const activeAttempt = await prisma.skillAssessmentResult.findFirst({
@@ -334,9 +341,10 @@ export const startAssessmentService = async (
     },
   });
 
-  if(activeAttempt) {
+  if (activeAttempt) {
     const activeAttemptExpiresAt = new Date(
-      activeAttempt.startedAt.getTime() + assessment.durationMinutes * 60 * 1000,
+      activeAttempt.startedAt.getTime() +
+        assessment.durationMinutes * 60 * 1000,
     );
 
     if (activeAttemptExpiresAt > new Date()) {
@@ -382,5 +390,73 @@ export const startAssessmentService = async (
     startedAt,
     expiresAt,
     questions,
+  };
+};
+
+export const submitAssessmentService = async (
+  userId: number,
+  assessmentId: number,
+  resultId: number,
+  answers: {
+    questionId: number;
+    answer: AnswerOption;
+  }[],
+) => {
+  const result = await getAssessmentAttempt(userId, assessmentId, resultId);
+
+  validateAssessmentDeadline(
+    result.startedAt,
+    result.assessment.durationMinutes,
+  );
+
+  const questionIds = validateSubmittedAnswers(answers);
+
+  const processedAnswers = await processAssessmentAnswers(
+    assessmentId,
+    resultId,
+    answers,
+    questionIds,
+  );
+
+  const correctCount = processedAnswers.filter(
+    (answer) => answer.isCorrect,
+  ).length;
+
+  const score = Math.round((correctCount / 25) * 100);
+
+  const isPassed = score >= result.assessment.passingScore;
+
+  const badgeName = isPassed
+    ? `${result.assessment.skillName} Skill Badge`
+    : null;
+
+  const completedAt = new Date();
+
+  const updatedResult = await prisma.$transaction(async (tx) => {
+    await tx.skillAssessmentAnswer.createMany({
+      data: processedAnswers,
+    });
+
+    return tx.skillAssessmentResult.update({
+      where: {
+        id: resultId,
+      },
+      data: {
+        score,
+        isPassed,
+        completedAt,
+        badgeName,
+      },
+    });
+  });
+
+  return {
+    resultId: updatedResult.id,
+    score,
+    isPassed,
+    badgeName,
+    completedAt,
+    correctAnswers: correctCount,
+    totalQuestions: 25,
   };
 };

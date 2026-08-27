@@ -327,7 +327,8 @@ model SkillAssessmentQuestion {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  assessment SkillAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  assessment SkillAssessment         @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  answers    SkillAssessmentAnswer[]
 
   @@unique([assessmentId, questionOrder])
   @@index([assessmentId])
@@ -347,11 +348,29 @@ model SkillAssessmentResult {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  user       User            @relation(fields: [userId], references: [id])
-  assessment SkillAssessment @relation(fields: [assessmentId], references: [id])
+  user       User                    @relation(fields: [userId], references: [id])
+  assessment SkillAssessment         @relation(fields: [assessmentId], references: [id])
+  answers    SkillAssessmentAnswer[]
 
   @@index([userId])
   @@index([assessmentId])
   @@index([userId, assessmentId])
   @@map("skill_assessment_results")
+}
+
+model SkillAssessmentAnswer {
+  id         Int          @id @default(autoincrement())
+  resultId   Int
+  questionId Int
+  answer     AnswerOption
+  isCorrect  Boolean
+  createdAt  DateTime     @default(now())
+
+  result   SkillAssessmentResult   @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  question SkillAssessmentQuestion @relation(fields: [questionId], references: [id])
+
+  @@unique([resultId, questionId])
+  @@index([resultId])
+  @@index([questionId])
+  @@map("skill_assessment_answers")
 }
