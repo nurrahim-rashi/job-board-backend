@@ -18,6 +18,8 @@ import {
   startAssessmentController,
   submitAssessmentController,
   getUserBadgesController,
+  getUserAssessmentResultsController,
+  getUserAssessmentResultDetailController,
 } from "../controllers/assessment.controller.js";
 
 export const assessmentRoutes = express.Router();
@@ -33,6 +35,18 @@ assessmentRoutes.get(
   "/badges",
   verifyToken(process.env.JWT_SECRET!),
   getUserBadgesController,
+);
+
+assessmentRoutes.get(
+  "/results",
+  verifyToken(process.env.JWT_SECRET!),
+  getUserAssessmentResultsController,
+);
+
+assessmentRoutes.get(
+  "/results/:resultId",
+  verifyToken(process.env.JWT_SECRET!),
+  getUserAssessmentResultDetailController,
 );
 
 assessmentRoutes.post(

@@ -1803,4 +1803,250 @@ describe("POST /assessment", () => {
     // secondUser must not see firstUser's badge
     expect(response.body.data).toEqual([]);
   });
+
+  it("Should return completed assessment results for the authenticated user", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Assessment History User",
+        email: `assessment-history-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    const assessment = await createTestAssessment();
+
+    const completedAt = new Date();
+
+    const result = await prisma.skillAssessmentResult.create({
+      data: {
+        userId: jobSeeker.id,
+        assessmentId: assessment.id,
+        score: 88,
+        isPassed: true,
+        startedAt: new Date(Date.now() - 20 * 60 * 1000),
+        completedAt,
+        badgeName: `${assessment.skillName} Skill Badge`,
+      },
+    });
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .get("/assessment/results")
+      .set("Authorization", `Bearer ${token}`);
+
+    console.log("STATUS:", response.status);
+    console.log("BODY:", response.body);
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.message).toBe(
+      "Assessment results retrieved successfully",
+    );
+
+    expect(response.body.data).toHaveLength(1);
+
+    expect(response.body.data[0]).toMatchObject({
+      resultId: result.id,
+      assessmentId: assessment.id,
+      skillName: assessment.skillName,
+      title: assessment.title,
+      score: 88,
+      isPassed: true,
+      badgeName: `${assessment.skillName} Skill Badge`,
+    });
+  });
+
+  it("Should exclude unfinished assessment attempts from result history", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Assessment History Filter User",
+        email: `assessment-history-filter-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    const assessment = await createTestAssessment();
+
+    await prisma.skillAssessmentResult.create({
+      data: {
+        userId: jobSeeker.id,
+        assessmentId: assessment.id,
+        score: 0,
+        isPassed: false,
+        startedAt: new Date(),
+        completedAt: null,
+        badgeName: null,
+      },
+    });
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .get("/assessment/results")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual([]);
+  });
+
+  it("Should return completed assessment result detail", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Assessment Result Detail User",
+        email: `assessment-result-detail-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    const assessment = await createTestAssessment();
+
+    await create25Questions(assessment.id);
+
+    const result = await prisma.skillAssessmentResult.create({
+      data: {
+        userId: jobSeeker.id,
+        assessmentId: assessment.id,
+        score: 100,
+        isPassed: true,
+        startedAt: new Date(Date.now() - 20 * 60 * 1000),
+        completedAt: new Date(),
+        badgeName: `${assessment.skillName} Skill Badge`,
+      },
+    });
+
+    const questions = await prisma.skillAssessmentQuestion.findMany({
+      where: {
+        assessmentId: assessment.id,
+      },
+      orderBy: {
+        questionOrder: "asc",
+      },
+    });
+
+    await prisma.skillAssessmentAnswer.createMany({
+      data: questions.map((question) => ({
+        resultId: result.id,
+        questionId: question.id,
+        answer: question.correctAnswer,
+        isCorrect: true,
+      })),
+    });
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .get(`/assessment/results/${result.id}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.message).toBe(
+      "Assessment result detail retrieved successfully",
+    );
+
+    expect(response.body.data).toMatchObject({
+      resultId: result.id,
+      assessmentId: assessment.id,
+      skillName: assessment.skillName,
+      title: assessment.title,
+      score: 100,
+      isPassed: true,
+      badgeName: `${assessment.skillName} Skill Badge`,
+    });
+
+    expect(response.body.data.answers).toHaveLength(25);
+
+    expect(response.body.data.answers[0]).toMatchObject({
+      questionId: questions[0].id,
+      question: questions[0].question,
+      questionOrder: 1,
+      answer: questions[0].correctAnswer,
+      isCorrect: true,
+    });
+
+    // Never expose the assessment answer key
+    for (const answer of response.body.data.answers) {
+      expect(answer).not.toHaveProperty("correctAnswer");
+    }
+  });
+
+  it("Should return 404 when accessing another user's assessment result", async () => {
+    const firstUser = await prisma.user.create({
+      data: {
+        name: "Assessment Result Owner",
+        email: `result-owner-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    const secondUser = await prisma.user.create({
+      data: {
+        name: "Assessment Result Viewer",
+        email: `result-viewer-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = firstUser.id;
+    additionalTestUserId = secondUser.id;
+
+    const assessment = await createTestAssessment();
+
+    const result = await prisma.skillAssessmentResult.create({
+      data: {
+        userId: firstUser.id,
+        assessmentId: assessment.id,
+        score: 88,
+        isPassed: true,
+        startedAt: new Date(Date.now() - 20 * 60 * 1000),
+        completedAt: new Date(),
+        badgeName: `${assessment.skillName} Skill Badge`,
+      },
+    });
+
+    const token = createToken(secondUser);
+
+    const response = await request(app)
+      .get(`/assessment/results/${result.id}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(404);
+
+    expect(response.body.message).toBe("Assessment result not found");
+  });
+
+  it("Should return 404 when assessment result does not exist", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Missing Result User",
+        email: `missing-result-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .get("/assessment/results/999999")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(404);
+
+    expect(response.body.message).toBe("Assessment result not found");
+  });
 });
