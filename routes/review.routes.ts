@@ -7,8 +7,8 @@ import { createReviewSchema } from "../validators/review.validator.js";
 export const reviewRoutes = express.Router();
 
 reviewRoutes.post(
-    "/:companyId",
-    verifyToken(process.env.JWT_SECRET!),
-    validate(createReviewSchema),
-    createReviewController
+  "/:companyId",
+  verifyToken(process.env.JWT_SECRET!),
+  validate(createReviewSchema),
+  createReviewController,
 );
