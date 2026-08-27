@@ -7,6 +7,7 @@ import { authRoutes } from "./routes/auth.routes.js";
 import { preSelectionTestRoutes } from "./routes/pre-selection-test.routes.js";
 import { applicantTestRoutes } from "./routes/applicant-test.routes.js";
 import { assessmentRoutes } from "./routes/assessment.routes.js";
+import { jobRoutes } from "./routes/job.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 
 const app = express();
@@ -21,6 +22,7 @@ app.use("/uploads", express.static("uploads"));
 app.use("/auth", authRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/assessment", assessmentRoutes);
+app.use("/jobs", jobRoutes);
 app.use("/jobs", preSelectionTestRoutes);
 app.use("/jobs", applicantTestRoutes);
 
