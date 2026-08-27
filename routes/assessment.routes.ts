@@ -17,6 +17,7 @@ import {
   getAssessmentDiscoveryDetailController,
   startAssessmentController,
   submitAssessmentController,
+  getUserBadgesController,
 } from "../controllers/assessment.controller.js";
 
 export const assessmentRoutes = express.Router();
@@ -26,6 +27,12 @@ assessmentRoutes.post(
   verifyToken(process.env.JWT_SECRET!),
   validate(createAssessmentSchema),
   createAssessmentController,
+);
+
+assessmentRoutes.get(
+  "/badges",
+  verifyToken(process.env.JWT_SECRET!),
+  getUserBadgesController,
 );
 
 assessmentRoutes.post(
@@ -46,7 +53,7 @@ assessmentRoutes.post(
   verifyToken(process.env.JWT_SECRET!),
   validate(submitAssessmentSchema),
   submitAssessmentController,
-)
+);
 
 assessmentRoutes.get(
   "/:assessmentId/questions",
