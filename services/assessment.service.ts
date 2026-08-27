@@ -460,3 +460,49 @@ export const submitAssessmentService = async (
     totalQuestions: 25,
   };
 };
+
+export const getUserBadgesService = async (userId: number) => {
+  const passedResults = await prisma.skillAssessmentResult.findMany({
+    where: {
+      userId,
+      isPassed: true,
+      badgeName: {
+        not: null,
+      },
+      completedAt: {
+        not: null,
+      },
+    },
+    include: {
+      assessment: {
+        select: {
+          id: true,
+          skillName: true,
+          title: true,
+        },
+      },
+    },
+    orderBy: {
+      completedAt: "desc",
+    },
+  });
+
+  // Hanya memperlihatkan badge terbaru dari tiap assessement
+  const uniqueBadges = new Map();
+
+  for (const result of passedResults) {
+    if (!uniqueBadges.has(result.assessmentId)) {
+      uniqueBadges.set(result.assessmentId, {
+        resultId: result.id,
+        assessmentId: result.assessmentId,
+        skillName: result.assessment.skillName,
+        assessmentTitle: result.assessment.title,
+        badgeName: result.badgeName,
+        score: result.score,
+        earnedAt: result.completedAt,
+      });
+    }
+  }
+
+  return Array.from(uniqueBadges.values());
+};

@@ -26,6 +26,7 @@ const createTestAssessment = () => {
 };
 
 let testUserId: number | undefined;
+let additionalTestUserId: number | undefined;
 
 const createToken = (user: { id: number; role: string }) => {
   return jwt.sign(
@@ -89,26 +90,29 @@ describe("POST /assessment", () => {
     await prisma.skillAssessmentResult.deleteMany();
     await prisma.skillAssessment.deleteMany();
 
-    await prisma.userSubscription.deleteMany({
-      where: {
-        userId: testUserId,
-      },
-    });
+    const userIds = [testUserId, additionalTestUserId].filter(
+      (id): id is number => id !== undefined,
+    );
 
-    if (testUserId) {
+    if (userIds.length > 0) {
       await prisma.userSubscription.deleteMany({
         where: {
-          userId: testUserId,
+          userId: {
+            in: userIds,
+          },
         },
       });
 
       await prisma.user.deleteMany({
         where: {
-          id: testUserId,
+          id: {
+            in: userIds,
+          },
         },
       });
 
       testUserId = undefined;
+      additionalTestUserId = undefined;
     }
   });
 
@@ -1580,5 +1584,223 @@ describe("POST /assessment", () => {
     expect(response.body.message).toBe(
       "One or more questions do not belong to this assessment",
     );
+  });
+
+  it("Should return earned badges for passed assessments", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Badge Test User",
+        email: `badge-user-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    const assessment = await createTestAssessment();
+
+    const completedAt = new Date();
+
+    const result = await prisma.skillAssessmentResult.create({
+      data: {
+        userId: jobSeeker.id,
+        assessmentId: assessment.id,
+        score: 88,
+        isPassed: true,
+        startedAt: new Date(Date.now() - 20 * 60 * 1000),
+        completedAt,
+        badgeName: `${assessment.skillName} Skill Badge`,
+      },
+    });
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .get("/assessment/badges")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.message).toBe("User badges retrieved successfully");
+
+    expect(response.body.data).toHaveLength(1);
+
+    expect(response.body.data[0]).toMatchObject({
+      resultId: result.id,
+      assessmentId: assessment.id,
+      skillName: assessment.skillName,
+      assessmentTitle: assessment.title,
+      badgeName: `${assessment.skillName} Skill Badge`,
+      score: 88,
+    });
+  });
+
+  it("Should not return badges for failed assessments", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Failed Badge User",
+        email: `failed-badge-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    const assessment = await createTestAssessment();
+
+    await prisma.skillAssessmentResult.create({
+      data: {
+        userId: jobSeeker.id,
+        assessmentId: assessment.id,
+        score: 60,
+        isPassed: false,
+        startedAt: new Date(Date.now() - 20 * 60 * 1000),
+        completedAt: new Date(),
+        badgeName: null,
+      },
+    });
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .get("/assessment/badges")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.data).toEqual([]);
+  });
+
+  it("Should return only one badge for multiple passed attempts of the same assessment", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Retake Badge User",
+        email: `retake-badge-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    const assessment = await createTestAssessment();
+
+    await prisma.skillAssessmentResult.createMany({
+      data: [
+        {
+          userId: jobSeeker.id,
+          assessmentId: assessment.id,
+          score: 80,
+          isPassed: true,
+          startedAt: new Date(Date.now() - 40 * 60 * 1000),
+          completedAt: new Date(Date.now() - 20 * 60 * 1000),
+          badgeName: `${assessment.skillName} Skill Badge`,
+        },
+        {
+          userId: jobSeeker.id,
+          assessmentId: assessment.id,
+          score: 92,
+          isPassed: true,
+          startedAt: new Date(Date.now() - 15 * 60 * 1000),
+          completedAt: new Date(),
+          badgeName: `${assessment.skillName} Skill Badge`,
+        },
+      ],
+    });
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .get("/assessment/badges")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.data).toHaveLength(1);
+
+    expect(response.body.data[0]).toMatchObject({
+      assessmentId: assessment.id,
+      skillName: assessment.skillName,
+      badgeName: `${assessment.skillName} Skill Badge`,
+      score: 92,
+    });
+  });
+
+  it("Should return empty badge list when user has no earned badges", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "No Badge User",
+        email: `no-badge-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .get("/assessment/badges")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.message).toBe("User badges retrieved successfully");
+
+    expect(response.body.data).toEqual([]);
+  });
+
+  it("Should not return badges belonging to another user", async () => {
+    const firstUser = await prisma.user.create({
+      data: {
+        name: "Badge Owner",
+        email: `badge-owner-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    const secondUser = await prisma.user.create({
+      data: {
+        name: "Badge Viewer",
+        email: `badge-viewer-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    // Register both users for afterEach cleanup
+    testUserId = firstUser.id;
+    additionalTestUserId = secondUser.id;
+
+    const assessment = await createTestAssessment();
+
+    // Only firstUser owns this badge
+    await prisma.skillAssessmentResult.create({
+      data: {
+        userId: firstUser.id,
+        assessmentId: assessment.id,
+        score: 92,
+        isPassed: true,
+        startedAt: new Date(Date.now() - 20 * 60 * 1000),
+        completedAt: new Date(),
+        badgeName: `${assessment.skillName} Skill Badge`,
+      },
+    });
+
+    // Authenticate as secondUser
+    const token = createToken(secondUser);
+
+    const response = await request(app)
+      .get("/assessment/badges")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+
+    // secondUser must not see firstUser's badge
+    expect(response.body.data).toEqual([]);
   });
 });

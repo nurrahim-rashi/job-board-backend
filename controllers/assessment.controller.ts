@@ -9,6 +9,7 @@ import {
   getAssessmentDiscoveryDetailService,
   startAssessmentService,
   submitAssessmentService,
+  getUserBadgesService,
 } from "../services/assessment.service.js";
 
 export const createAssessmentController = async (
@@ -167,5 +168,18 @@ export const submitAssessmentController = async (
   return res.status(200).json({
     message: "Assessment submitted successfully",
     data: result,
+  });
+};
+
+export const getUserBadgesController = async (
+  req: Request,
+  res: Response,
+) => {
+  const userId = res.locals.user.id;
+  const badges = await getUserBadgesService(userId);
+
+  return res.status(200).json({
+    message: "User badges retrieved successfully",
+    data: badges,
   });
 };
