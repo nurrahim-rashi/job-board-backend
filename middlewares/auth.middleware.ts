@@ -42,3 +42,19 @@ export const verifyToken = (secretKey: string) => {
         }
     };
 };
+
+export const verifyRole = (...allowedRoles: UserRole[]) => {
+    return (req: Request, _res: Response, next: NextFunction) => {
+        const user = (req as AuthenticatedRequest).user;
+
+        if (!user) {
+            return next(new ApiError("Unauthenticated", 401));
+        }
+
+        if (!allowedRoles.includes(user.role)) {
+            return next(new ApiError("Unauthorized", 403));
+        }
+
+        next();
+    };
+};

@@ -128,6 +128,8 @@ model JobPosting {
   banner              String?
   category            JobCategory
   cityLocation        String
+  latitude            String?
+  longitude           String?
   salaryMin           Int?
   salaryMax           Int?
   hasPreSelectionTest Boolean     @default(false)
