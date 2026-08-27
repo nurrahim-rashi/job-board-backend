@@ -8,17 +8,19 @@
     "dev": "tsx watch index.ts",
     "test": "vitest",
     "test:run": "vitest run",
-    "docs:erd": "node scripts/generate-erd.mjs"
+    "docs:erd": "prisma generate && node scripts/generate-erd.mjs"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@hpcc-js/wasm-graphviz": "^1.28.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^26.2.0",
     "@types/pg": "^8.21.0",
     "@types/supertest": "^7.2.1",
     "prisma": "^7.9.1",
+    "prisma-erd-generator": "^3.2.1",
     "supertest": "^7.2.2",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",
