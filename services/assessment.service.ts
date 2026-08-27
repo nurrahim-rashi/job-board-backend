@@ -506,3 +506,101 @@ export const getUserBadgesService = async (userId: number) => {
 
   return Array.from(uniqueBadges.values());
 };
+
+export const getUserAssessmentResultsService = async (userId: number) => {
+  const results = await prisma.skillAssessmentResult.findMany({
+    where: {
+      userId,
+      completedAt: {
+        not: null,
+      },
+    },
+    include: {
+      assessment: {
+        select: {
+          id: true,
+          skillName: true,
+          title: true,
+        },
+      },
+    },
+    orderBy: {
+      completedAt: "desc",
+    },
+  });
+
+  return results.map((result) => ({
+    resultId: result.id,
+    assessmentId: result.assessmentId,
+    skillName: result.assessment.skillName,
+    title: result.assessment.title,
+    score: result.score,
+    isPassed: result.isPassed,
+    badgeName: result.badgeName,
+    startedAt: result.startedAt,
+    completedAt: result.completedAt,
+  }));
+};
+
+export const getUserAssessmentResultDetailService = async (
+  userId: number,
+  resultId: number,
+) => {
+  const result = await prisma.skillAssessmentResult.findFirst({
+    where: {
+      id: resultId,
+      userId,
+      completedAt: {
+        not: null,
+      },
+    },
+    include: {
+      assessment: {
+        select: {
+          id: true,
+          skillName: true,
+          title: true,
+        },
+      },
+      answers: {
+        include: {
+          question: {
+            select: {
+              id: true,
+              question: true,
+              questionOrder: true,
+            },
+          },
+        },
+        orderBy: {
+          question: {
+            questionOrder: "asc",
+          },
+        },
+      },
+    },
+  });
+
+  if (!result) {
+    throw new ApiError("Assessment result not found", 404);
+  }
+
+  return {
+    resultId: result.id,
+    assessmentId: result.assessmentId,
+    skillName: result.assessment.skillName,
+    title: result.assessment.title,
+    score: result.score,
+    isPassed: result.isPassed,
+    badgeName: result.badgeName,
+    startedAt: result.startedAt,
+    completedAt: result.completedAt,
+    answers: result.answers.map((answer) => ({
+      questionId: answer.questionId,
+      question: answer.question.question,
+      questionOrder: answer.question.questionOrder,
+      answer: answer.answer,
+      isCorrect: answer.isCorrect,
+    })),
+  };
+};

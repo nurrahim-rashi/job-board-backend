@@ -10,6 +10,8 @@ import {
   startAssessmentService,
   submitAssessmentService,
   getUserBadgesService,
+  getUserAssessmentResultsService,
+  getUserAssessmentResultDetailService,
 } from "../services/assessment.service.js";
 
 export const createAssessmentController = async (
@@ -138,10 +140,7 @@ export const startAssessmentController = async (
   const userId = res.locals.user.id;
   const assessmentId = Number(req.params.assessmentId);
 
-  const result = await startAssessmentService(
-    userId,
-    assessmentId,
-  );
+  const result = await startAssessmentService(userId, assessmentId);
 
   return res.status(201).json({
     message: "Assessment started successfully",
@@ -156,7 +155,7 @@ export const submitAssessmentController = async (
   const userId = res.locals.user.id;
   const assessmentId = Number(req.params.assessmentId);
 
-  const {resultId, answers} = req.body;
+  const { resultId, answers } = req.body;
 
   const result = await submitAssessmentService(
     userId,
@@ -171,15 +170,41 @@ export const submitAssessmentController = async (
   });
 };
 
-export const getUserBadgesController = async (
-  req: Request,
-  res: Response,
-) => {
+export const getUserBadgesController = async (req: Request, res: Response) => {
   const userId = res.locals.user.id;
   const badges = await getUserBadgesService(userId);
 
   return res.status(200).json({
     message: "User badges retrieved successfully",
     data: badges,
+  });
+};
+
+export const getUserAssessmentResultsController = async (
+  req: Request,
+  res: Response,
+) => {
+  const userId = res.locals.user.id;
+
+  const results = await getUserAssessmentResultsService(userId);
+
+  return res.status(200).json({
+    message: "Assessment results retrieved successfully",
+    data: results,
+  });
+};
+
+export const getUserAssessmentResultDetailController = async (
+  req: Request,
+  res: Response,
+) => {
+  const userId = res.locals.user.id;
+  const resultId = Number(req.params.resultId);
+
+  const result = await getUserAssessmentResultDetailService(userId, resultId);
+
+  return res.status(200).json({
+    message: "Assessment result detail retrieved successfully",
+    data: result,
   });
 };
