@@ -8,6 +8,7 @@ import {
   validateAssessmentDeadline,
   validateSubmittedAnswers,
 } from "../helpers/assessment.helper.js";
+import { randomUUID } from "node:crypto";
 
 export const createAssessmentService = async (
   userRole: UserRole,
@@ -602,5 +603,81 @@ export const getUserAssessmentResultDetailService = async (
       answer: answer.answer,
       isCorrect: answer.isCorrect,
     })),
+  };
+};
+
+export const generateAssessmentCertificateService = async (
+  userId: number,
+  resultId: number,
+) => {
+  const result = await prisma.skillAssessmentResult.findFirst({
+    where: {
+      id: resultId,
+      userId,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      assessment: {
+        select: {
+          id: true,
+          skillName: true,
+          title: true,
+        },
+      },
+    },
+  });
+
+  if (!result) {
+    throw new ApiError("Assessment result not found", 404);
+  }
+
+  if (!result.completedAt) {
+    throw new ApiError(
+      "Assessment must be completed before generating a certificate",
+      409,
+    );
+  }
+
+  if (!result.isPassed) {
+    throw new ApiError(
+      "Certificate is only available for passed assessments",
+      403,
+    );
+  }
+
+  let certificateCode = result.certificateCode;
+
+  if (!certificateCode) {
+    certificateCode = `CERT-${randomUUID()}`;
+
+    await prisma.skillAssessmentResult.update({
+      where: {
+        id: result.id,
+      },
+      data: {
+        certificateCode,
+      },
+    });
+  }
+
+  return {
+    resultId: result.id,
+    certificateCode,
+    user: {
+      id: result.user.id,
+      name: result.user.name,
+    },
+    assessment: {
+      id: result.assessment.id,
+      skillName: result.assessment.skillName,
+      title: result.assessment.title,
+    },
+    score: result.score,
+    completedAt: result.completedAt,
   };
 };
