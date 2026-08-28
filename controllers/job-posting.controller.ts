@@ -17,8 +17,8 @@ export const createJobController = async (
 ) => {
   try {
     const userId = req.user!.id;
-    const result = await createJobService(userId, req.body);
-    res.status(201).send(result);
+    const result = await createJobService(userId, req.body, req.file);
+    res.status(201).json({ message: "Job posting created successfully", data: result });
   } catch (error) {
     next(error);
   }
@@ -35,7 +35,7 @@ export const getJobListController = async (
     const companyId = await getCompanyId(userId);
 
     const result = await getJobListService(companyId, query);
-    res.status(200).send(result);
+    res.status(200).json({ data: result.data, meta: result.meta });
   } catch (error) {
     next(error);
   }
@@ -48,7 +48,7 @@ export const getJobDetailController = async (
 ) => {
     try {
         const result = await getJobDetailsService(req.job!)
-        res.status(200).send(result)
+        res.status(200).json({ data: result })
     } catch (error) {
         next(error)
     }
@@ -60,8 +60,8 @@ export const updateJobController = async (
   next: NextFunction,
 ) => {
     try {
-        const result = await updateJobService(req.job!, req.body)
-        res.status(200).send(result)
+        const result = await updateJobService(req.job!, req.body, req.file)
+        res.status(200).json({ message: "Job posting updated successfully", data: result })
     } catch (error) {
         next(error)
     }

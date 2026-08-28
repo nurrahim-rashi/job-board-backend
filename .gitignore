@@ -6,3 +6,4 @@ node_modules
 /uploads
 
 .env.test
+.DS_Store

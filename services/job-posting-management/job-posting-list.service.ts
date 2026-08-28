@@ -26,7 +26,8 @@ export const getJobListService = async (companyId: number, query: JobQueryInput)
                     select: {
                         applications: {
                             where: {status: {not: "DRAFT"}}
-                        }
+                        },
+                        preSelectionTests: true
                     }
                 }
             }
@@ -38,6 +39,7 @@ export const getJobListService = async (companyId: number, query: JobQueryInput)
         data: jobs.map((job)=>({
             ...job,
             applicantCount: job._count.applications,
+            questionCount: job._count.preSelectionTests,
             _count: undefined,
         })),
         meta: {

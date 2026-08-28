@@ -3,6 +3,7 @@ import { verifyToken } from '../middlewares/auth.middleware.js';
 import { verifyRole } from '../middlewares/verifyRole.middleware.js';
 import { jobOwnership } from '../middlewares/job-ownership.middleware.js';
 import { validate } from '../middlewares/validation.middleware.js';
+import { upload } from '../middlewares/upload.middleware.js';
 import { createJobSchema, publishSchema, updateJobSchema } from '../validators/job-posting.validator.js';
 import { createJobController, deleteJobController, getJobDetailController, getJobListController, togglePublishController, updateJobController } from '../controllers/job-posting.controller.js';
 
@@ -15,9 +16,12 @@ const adminOnly = [
 
 const adminWithJob = [...adminOnly, jobOwnership]
 
+const uploadBanner = upload().single("banner")
+
 jobPostingRoutes.post(
     "/",
     ...adminOnly,
+    uploadBanner,
     validate(createJobSchema),
     createJobController
 )
@@ -37,6 +41,7 @@ jobPostingRoutes.get(
 jobPostingRoutes.put(
     "/:slug",
     ...adminWithJob,
+    uploadBanner,
     validate(updateJobSchema),
     updateJobController
 )

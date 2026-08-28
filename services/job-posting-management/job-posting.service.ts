@@ -1,4 +1,5 @@
 import { JobPosting } from "../../generated/prisma/client.js";
+import { uploadImage } from "../../lib/cloudinary.js";
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/api-error.js";
 import { slugify } from "../../utils/slug.js";
@@ -12,6 +13,7 @@ const randomSuffix = () => Math.random().toString(36).slice(2, 8);
 export const createJobService = async (
   userId: number,
   input: CreateJobInput,
+  banner?: Express.Multer.File,
 ) => {
   const company = await prisma.company.findUnique({
     where: { userId },
@@ -24,9 +26,12 @@ export const createJobService = async (
 
   const slug = slugify(input.title) + "-" + randomSuffix();
 
+  const bannerUrl = banner ? (await uploadImage(banner)).secure_url : undefined;
+
   return prisma.jobPosting.create({
     data: {
       ...input,
+      banner: bannerUrl,
       companyId: company.id,
       slug,
     },
@@ -53,7 +58,12 @@ export const getJobDetailsService = async (job: JobPosting) => {
 export const updateJobService = async (
   job: JobPosting,
   input: UpdateJobInput,
+  banner?: Express.Multer.File,
 ) => {
+  if (!banner && Object.keys(input).length === 0) {
+    throw new ApiError("No data was modified", 400);
+  }
+
   const salaryMin = input.salaryMin ?? job.salaryMin;
   const salaryMax = input.salaryMax ?? job.salaryMax;
 
@@ -64,9 +74,11 @@ export const updateJobService = async (
     );
   }
 
+  const bannerUrl = banner ? (await uploadImage(banner)).secure_url : undefined;
+
   return prisma.jobPosting.update({
     where: { id: job.id },
-    data: input ,
+    data: { ...input, ...(bannerUrl && { banner: bannerUrl }) },
   });
 };
 
