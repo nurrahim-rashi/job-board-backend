@@ -1,6 +1,6 @@
 import express from 'express'
 import { verifyToken } from '../middlewares/auth.middleware.js';
-import { verifyRole } from '../middlewares/verifyRole.middleware.js';
+import { verifyRole } from "../middlewares/auth.middleware.js";
 import { jobOwnership } from '../middlewares/job-ownership.middleware.js';
 import { validate } from '../middlewares/validation.middleware.js';
 import { upload } from '../middlewares/upload.middleware.js';
