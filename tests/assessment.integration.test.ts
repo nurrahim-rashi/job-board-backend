@@ -83,6 +83,17 @@ const create25Questions = async (assessmentId: number) => {
   });
 };
 
+const createJobSeeker = async () => {
+  return prisma.user.create({
+    data: {
+      name: "Test Job Seeker",
+      email: `jobseeker-${Date.now()}-${Math.random()}@test.com`,
+      password: "test-password",
+      role: "JOB_SEEKER",
+    },
+  });
+};
+
 describe("POST /assessment", () => {
   afterEach(async () => {
     await prisma.skillAssessmentAnswer.deleteMany();
@@ -2048,5 +2059,180 @@ describe("POST /assessment", () => {
     expect(response.status).toBe(404);
 
     expect(response.body.message).toBe("Assessment result not found");
+  });
+
+  it("Should generate certificate for passed assessment result", async () => {
+    const user = await createJobSeeker();
+    testUserId = user.id;
+
+    const assessment = await createTestAssessment();
+
+    const result = await prisma.skillAssessmentResult.create({
+      data: {
+        userId: user.id,
+        assessmentId: assessment.id,
+        score: 100,
+        isPassed: true,
+        startedAt: new Date(),
+        completedAt: new Date(),
+        badgeName: `${assessment.skillName} Skill Badge`,
+      },
+    });
+
+    const token = createToken(user);
+
+    const response = await request(app)
+      .post(`/assessment/results/${result.id}/certificate`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.data).toMatchObject({
+      resultId: result.id,
+      score: 100,
+    });
+
+    expect(response.body.data.certificateCode).toBeTruthy();
+
+    const savedResult = await prisma.skillAssessmentResult.findUnique({
+      where: {
+        id: result.id,
+      },
+    });
+
+    expect(savedResult?.certificateCode).toBe(
+      response.body.data.certificateCode,
+    );
+  });
+
+  it("Should return the same certificate code when requested again", async () => {
+    const user = await createJobSeeker();
+    testUserId = user.id;
+
+    const assessment = await createTestAssessment();
+
+    const result = await prisma.skillAssessmentResult.create({
+      data: {
+        userId: user.id,
+        assessmentId: assessment.id,
+        score: 100,
+        isPassed: true,
+        startedAt: new Date(),
+        completedAt: new Date(),
+      },
+    });
+
+    const token = createToken(user);
+
+    const firstResponse = await request(app)
+      .post(`/assessment/results/${result.id}/certificate`)
+      .set("Authorization", `Bearer ${token}`);
+
+    const secondResponse = await request(app)
+      .post(`/assessment/results/${result.id}/certificate`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(firstResponse.status).toBe(200);
+    expect(secondResponse.status).toBe(200);
+
+    expect(secondResponse.body.data.certificateCode).toBe(
+      firstResponse.body.data.certificateCode,
+    );
+  });
+
+  it("Should reject certificate generation for failed assessment", async () => {
+    const user = await createJobSeeker();
+    testUserId = user.id;
+
+    const assessment = await createTestAssessment();
+
+    const result = await prisma.skillAssessmentResult.create({
+      data: {
+        userId: user.id,
+        assessmentId: assessment.id,
+        score: 60,
+        isPassed: false,
+        startedAt: new Date(),
+        completedAt: new Date(),
+      },
+    });
+
+    const token = createToken(user);
+
+    const response = await request(app)
+      .post(`/assessment/results/${result.id}/certificate`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(403);
+    expect(response.body.message).toBe(
+      "Certificate is only available for passed assessments",
+    );
+  });
+
+  it("Should reject certificate generation for unfinished assessment", async () => {
+    const user = await createJobSeeker();
+    testUserId = user.id;
+
+    const assessment = await createTestAssessment();
+
+    const result = await prisma.skillAssessmentResult.create({
+      data: {
+        userId: user.id,
+        assessmentId: assessment.id,
+        score: 0,
+        isPassed: false,
+        startedAt: new Date(),
+        completedAt: null,
+      },
+    });
+
+    const token = createToken(user);
+
+    const response = await request(app)
+      .post(`/assessment/results/${result.id}/certificate`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toBe(
+      "Assessment must be completed before generating a certificate",
+    );
+  });
+
+  it("Should reject certificate generation for another user's result", async () => {
+    const owner = await createJobSeeker();
+    testUserId = owner.id;
+
+    const otherUser = await createJobSeeker();
+    additionalTestUserId = otherUser.id;
+
+    const assessment = await createTestAssessment();
+
+    const result = await prisma.skillAssessmentResult.create({
+      data: {
+        userId: owner.id,
+        assessmentId: assessment.id,
+        score: 100,
+        isPassed: true,
+        startedAt: new Date(),
+        completedAt: new Date(),
+      },
+    });
+
+    const otherUserToken = createToken(otherUser);
+
+    const response = await request(app)
+      .post(`/assessment/results/${result.id}/certificate`)
+      .set("Authorization", `Bearer ${otherUserToken}`);
+
+    expect(response.status).toBe(404);
+    expect(response.body.message).toBe("Assessment result not found");
+  });
+
+  it("Should reject certificate generation without authentication", async () => {
+    const response = await request(app).post(
+      "/assessment/results/999999/certificate",
+    );
+
+    expect(response.status).toBe(401);
   });
 });

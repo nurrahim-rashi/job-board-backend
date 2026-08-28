@@ -12,6 +12,7 @@ import {
   getUserBadgesService,
   getUserAssessmentResultsService,
   getUserAssessmentResultDetailService,
+  generateAssessmentCertificateService,
 } from "../services/assessment.service.js";
 
 export const createAssessmentController = async (
@@ -206,5 +207,23 @@ export const getUserAssessmentResultDetailController = async (
   return res.status(200).json({
     message: "Assessment result detail retrieved successfully",
     data: result,
+  });
+};
+
+export const generateAssessmentCertificateController = async (
+  req: Request,
+  res: Response,
+) => {
+  const userId = res.locals.user.id;
+  const resultId = Number(req.params.resultId);
+
+  const certificate = await generateAssessmentCertificateService(
+    userId,
+    resultId,
+  );
+
+  return res.status(200).json({
+    message: "Assessment certificate generated successfully",
+    data: certificate,
   });
 };

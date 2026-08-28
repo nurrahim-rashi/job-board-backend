@@ -20,6 +20,7 @@ import {
   getUserBadgesController,
   getUserAssessmentResultsController,
   getUserAssessmentResultDetailController,
+  generateAssessmentCertificateController,
 } from "../controllers/assessment.controller.js";
 
 export const assessmentRoutes = express.Router();
@@ -41,6 +42,12 @@ assessmentRoutes.get(
   "/results",
   verifyToken(process.env.JWT_SECRET!),
   getUserAssessmentResultsController,
+);
+
+assessmentRoutes.post(
+  "/results/:resultId/certificate",
+  verifyToken(process.env.JWT_SECRET!),
+  generateAssessmentCertificateController,
 );
 
 assessmentRoutes.get(
