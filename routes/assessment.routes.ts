@@ -22,6 +22,7 @@ import {
   getUserAssessmentResultDetailController,
   generateAssessmentCertificateController,
 } from "../controllers/assessment.controller.js";
+import { downloadAssessmentCertificateController } from "../controllers/assessment-certificate.controller.js";
 
 export const assessmentRoutes = express.Router();
 
@@ -48,6 +49,12 @@ assessmentRoutes.post(
   "/results/:resultId/certificate",
   verifyToken(process.env.JWT_SECRET!),
   generateAssessmentCertificateController,
+);
+
+assessmentRoutes.get(
+  "/results/:resultId/certificate/pdf",
+  verifyToken(process.env.JWT_SECRET!),
+  downloadAssessmentCertificateController,
 );
 
 assessmentRoutes.get(

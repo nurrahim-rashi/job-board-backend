@@ -3,6 +3,7 @@ import request from "supertest";
 import jwt from "jsonwebtoken";
 import app from "../app.js";
 import { prisma } from "../lib/prisma.js";
+import type { Response } from "supertest";
 
 const createDeveloper = async () => {
   return prisma.user.create({
@@ -91,6 +92,25 @@ const createJobSeeker = async () => {
       password: "test-password",
       role: "JOB_SEEKER",
     },
+  });
+};
+
+const binaryParser = (
+  res: Response,
+  callback: (error: Error | null, body: Buffer) => void,
+) => {
+  const chunks: Buffer[] = [];
+
+  res.on("data", (chunk: Buffer) => {
+    chunks.push(Buffer.from(chunk));
+  });
+
+  res.on("end", () => {
+    callback(null, Buffer.concat(chunks));
+  });
+
+  res.on("error", (error: Error) => {
+    callback(error, Buffer.alloc(0));
   });
 };
 
@@ -2231,6 +2251,126 @@ describe("POST /assessment", () => {
   it("Should reject certificate generation without authentication", async () => {
     const response = await request(app).post(
       "/assessment/results/999999/certificate",
+    );
+
+    expect(response.status).toBe(401);
+  });
+
+  it("Should download certificate PDF for passed assessment result", async () => {
+    const user = await createJobSeeker();
+    testUserId = user.id;
+
+    const assessment = await createTestAssessment();
+
+    const result = await prisma.skillAssessmentResult.create({
+      data: {
+        userId: user.id,
+        assessmentId: assessment.id,
+        score: 100,
+        isPassed: true,
+        startedAt: new Date(),
+        completedAt: new Date(),
+        badgeName: `${assessment.skillName} Skill Badge`,
+      },
+    });
+
+    const token = createToken(user);
+
+    const response = await request(app)
+      .get(`/assessment/results/${result.id}/certificate/pdf`)
+      .set("Authorization", `Bearer ${token}`)
+      .buffer(true)
+      .parse(binaryParser);
+
+    expect(response.status).toBe(200);
+
+    expect(response.headers["content-type"]).toContain("application/pdf");
+
+    expect(response.headers["content-disposition"]).toContain("attachment;");
+
+    expect(response.headers["content-disposition"]).toContain(".pdf");
+
+    expect(Buffer.isBuffer(response.body)).toBe(true);
+
+    expect(response.body.subarray(0, 4).toString()).toBe("%PDF");
+
+    const savedResult = await prisma.skillAssessmentResult.findUnique({
+      where: {
+        id: result.id,
+      },
+    });
+
+    expect(savedResult?.certificateCode).toBeTruthy();
+
+    expect(response.headers["content-disposition"]).toContain(
+      savedResult!.certificateCode!,
+    );
+  });
+
+  it("Should reject certificate PDF for failed assessment", async () => {
+    const user = await createJobSeeker();
+    testUserId = user.id;
+
+    const assessment = await createTestAssessment();
+
+    const result = await prisma.skillAssessmentResult.create({
+      data: {
+        userId: user.id,
+        assessmentId: assessment.id,
+        score: 60,
+        isPassed: false,
+        startedAt: new Date(),
+        completedAt: new Date(),
+      },
+    });
+
+    const token = createToken(user);
+
+    const response = await request(app)
+      .get(`/assessment/results/${result.id}/certificate/pdf`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(403);
+
+    expect(response.body.message).toBe(
+      "Certificate is only available for passed assessments",
+    );
+  });
+
+  it("Should reject certificate PDF for another user's result", async () => {
+    const owner = await createJobSeeker();
+    testUserId = owner.id;
+
+    const otherUser = await createJobSeeker();
+    additionalTestUserId = otherUser.id;
+
+    const assessment = await createTestAssessment();
+
+    const result = await prisma.skillAssessmentResult.create({
+      data: {
+        userId: owner.id,
+        assessmentId: assessment.id,
+        score: 100,
+        isPassed: true,
+        startedAt: new Date(),
+        completedAt: new Date(),
+      },
+    });
+
+    const token = createToken(otherUser);
+
+    const response = await request(app)
+      .get(`/assessment/results/${result.id}/certificate/pdf`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(404);
+
+    expect(response.body.message).toBe("Assessment result not found");
+  });
+
+  it("Should reject certificate PDF without authentication", async () => {
+    const response = await request(app).get(
+      "/assessment/results/999999/certificate/pdf",
     );
 
     expect(response.status).toBe(401);
