@@ -681,3 +681,31 @@ export const generateAssessmentCertificateService = async (
     completedAt: result.completedAt,
   };
 };
+
+export const getDeveloperAssessmentsService = async (userRole: UserRole) => {
+  if (userRole !== "DEVELOPER") {
+    throw new ApiError("Only developer accounts can manage assessments", 403);
+  }
+
+  return prisma.skillAssessment.findMany({
+    select: {
+      id: true,
+      skillName: true,
+      title: true,
+      description: true,
+      passingScore: true,
+      durationMinutes: true,
+      questionCount: true,
+      createdAt: true,
+      updatedAt: true,
+      _count: {
+        select: {
+          questions: true,
+        },
+      },
+    },
+    orderBy: {
+      skillName: "asc",
+    },
+  });
+};

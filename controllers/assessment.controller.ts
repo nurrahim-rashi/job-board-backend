@@ -13,6 +13,7 @@ import {
   getUserAssessmentResultsService,
   getUserAssessmentResultDetailService,
   generateAssessmentCertificateService,
+  getDeveloperAssessmentsService,
 } from "../services/assessment.service.js";
 
 export const createAssessmentController = async (
@@ -225,5 +226,19 @@ export const generateAssessmentCertificateController = async (
   return res.status(200).json({
     message: "Assessment certificate generated successfully",
     data: certificate,
+  });
+};
+
+export const getDeveloperAssessmentsController = async (
+  req: Request,
+  res: Response,
+) => {
+  const userRole = res.locals.user.role;
+
+  const assessments = await getDeveloperAssessmentsService(userRole);
+
+  return res.status(200).json({
+    message: "Developer assessments retrieved successfully",
+    data: assessments,
   });
 };
