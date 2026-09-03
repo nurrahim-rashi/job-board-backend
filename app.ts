@@ -10,6 +10,8 @@ import { assessmentRoutes } from "./routes/assessment.routes.js";
 import { jobRoutes } from "./routes/job.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { jobPostingRoutes } from "./routes/job-posting.routes.js";
+import { applicationRoutes } from "./routes/application.routes.js";
+import { companyRoutes } from "./routes/company.routes.js";
 
 const app = express();
 
@@ -24,9 +26,11 @@ app.use("/auth", authRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/assessment", assessmentRoutes);
 app.use("/jobs", jobRoutes);
+app.use("/companies", companyRoutes);
 app.use("/jobs", preSelectionTestRoutes);
 app.use("/jobs", applicantTestRoutes);
 app.use("/jobs", jobPostingRoutes);
+app.use("/", applicationRoutes);
 
 // errors
 app.use(errorHandler);
