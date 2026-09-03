@@ -2375,4 +2375,67 @@ describe("POST /assessment", () => {
 
     expect(response.status).toBe(401);
   });
+
+  it("Should allow developer to retrieve assessment management list", async () => {
+    const developer = await createDeveloper();
+
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+
+    await create25Questions(assessment.id);
+
+    const token = createToken(developer);
+
+    const response = await request(app)
+      .get("/assessment/manage")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.message).toBe(
+      "Developer assessments retrieved successfully",
+    );
+
+    expect(response.body.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: assessment.id,
+          skillName: assessment.skillName,
+          title: assessment.title,
+          passingScore: 75,
+          durationMinutes: 30,
+          questionCount: 25,
+          _count: {
+            questions: 25,
+          },
+        }),
+      ]),
+    );
+  });
+
+  it("Should reject non-developer from assessment management list", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Assessment Management Job Seeker",
+        email: `assessment-management-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .get("/assessment/manage")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(403);
+
+    expect(response.body.message).toBe(
+      "Only developer accounts can manage assessments",
+    );
+  });
 });
