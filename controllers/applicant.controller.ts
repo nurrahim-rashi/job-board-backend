@@ -1,0 +1,96 @@
+import { NextFunction, Request, Response } from "express";
+import {
+  getApplicantCvService,
+  getApplicantDetailService,
+} from "../services/applicant-management/applicant-detail.service.js";
+import { getApplicantListService } from "../services/applicant-management/applicant-list.service.js";
+import { updateApplicantStatusService } from "../services/applicant-management/applicant-status.service.js";
+import { ApiError } from "../utils/api-error.js";
+import {
+  applicantQuerySchema,
+  UpdateStatusInput,
+} from "../validators/applicant.validator.js";
+
+const getApplicationId = (value: unknown) => {
+  const applicationId = Number(value);
+
+  if (!Number.isInteger(applicationId) || applicationId < 1) {
+    throw new ApiError("Applicant not found", 404);
+  }
+
+  return applicationId;
+};
+
+export const getApplicantListController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const query = applicantQuerySchema.parse(req.query);
+    const result = await getApplicantListService(req.job!.id, query);
+    res.status(200).json({ data: result.data, meta: result.meta });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getApplicantDetailController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const applicationId = getApplicationId(req.params.applicationId);
+    const result = await getApplicantDetailService(req.job!, applicationId);
+    res.status(200).json({ data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getApplicantCvController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const applicationId = getApplicationId(req.params.applicationId);
+    const cv = await getApplicantCvService(req.job!.id, applicationId);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${cv.fileName}"`,
+    );
+    res.sendFile(cv.path, (error) => {
+      if (error) {
+        next(error);
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateApplicantStatusController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const applicationId = getApplicationId(req.params.applicationId);
+    const data = req.body as UpdateStatusInput;
+    const result = await updateApplicantStatusService(
+      req.job!,
+      applicationId,
+      data,
+    );
+    res.status(200).json({
+      message: `Applicant status updated to ${data.status}`,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -11,6 +11,7 @@ import { jobRoutes } from "./routes/job.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { jobPostingRoutes } from "./routes/job-posting.routes.js";
 import { applicationRoutes } from "./routes/application.routes.js";
+import { applicantRoutes } from "./routes/applicant.routes.js";
 import { companyRoutes } from "./routes/company.routes.js";
 
 const app = express();
@@ -28,6 +29,7 @@ app.use("/assessment", assessmentRoutes);
 app.use("/jobs", jobRoutes); 
 app.use("/jobs", applicantTestRoutes);
 app.use("/job-posting", preSelectionTestRoutes); 
+app.use("/job-posting", applicantRoutes);
 app.use("/job-posting", jobPostingRoutes);
 app.use("/companies", companyRoutes);
 app.use("/", applicationRoutes);
