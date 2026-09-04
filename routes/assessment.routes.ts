@@ -21,6 +21,7 @@ import {
   getUserAssessmentResultsController,
   getUserAssessmentResultDetailController,
   generateAssessmentCertificateController,
+  getDeveloperAssessmentsController,
 } from "../controllers/assessment.controller.js";
 import { downloadAssessmentCertificateController } from "../controllers/assessment-certificate.controller.js";
 
@@ -31,6 +32,12 @@ assessmentRoutes.post(
   verifyToken(process.env.JWT_SECRET!),
   validate(createAssessmentSchema),
   createAssessmentController,
+);
+
+assessmentRoutes.get(
+  "/manage",
+  verifyToken(process.env.JWT_SECRET!),
+  getDeveloperAssessmentsController,
 );
 
 assessmentRoutes.get(
