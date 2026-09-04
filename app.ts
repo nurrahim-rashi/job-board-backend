@@ -25,11 +25,11 @@ app.use("/uploads", express.static("uploads"));
 app.use("/auth", authRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/assessment", assessmentRoutes);
-app.use("/jobs", jobRoutes);
-app.use("/companies", companyRoutes);
-app.use("/jobs", preSelectionTestRoutes);
+app.use("/jobs", jobRoutes); 
 app.use("/jobs", applicantTestRoutes);
-app.use("/jobs", jobPostingRoutes);
+app.use("/job-posting", preSelectionTestRoutes); 
+app.use("/job-posting", jobPostingRoutes);
+app.use("/companies", companyRoutes);
 app.use("/", applicationRoutes);
 
 // errors
