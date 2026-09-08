@@ -67,6 +67,35 @@ const createActiveSubscription = async (userId: number) => {
   });
 };
 
+const createActiveProfessionalSubscription = async (userId: number) => {
+  const subscription = await prisma.subscription.upsert({
+    where: {
+      name: "PROFESSIONAL",
+    },
+    update: {},
+    create: {
+      name: "PROFESSIONAL",
+      price: 100000,
+      durationDays: 30,
+      featuresAccess: {
+        cvGenerator: true,
+        skillAssessmentLimit: null,
+        priorityReview: true,
+      },
+    },
+  });
+
+  return prisma.userSubscription.create({
+    data: {
+      userId,
+      subscriptionId: subscription.id,
+      status: "ACTIVE",
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
+  });
+};
+
 const create25Questions = async (assessmentId: number) => {
   await prisma.skillAssessmentQuestion.createMany({
     data: Array.from({ length: 25 }, (_, index) => ({
@@ -1175,6 +1204,115 @@ describe("POST /assessment", () => {
     expect(secondResponse.body.message).toBe(
       "You already have an active attempt for this assessment",
     );
+  });
+
+  it("Should reject Standard subscriber after using 2 assessment attempts", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Standard Limit User",
+        email: `standard-limit-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    await createActiveSubscription(jobSeeker.id);
+
+    const assessment = await createTestAssessment();
+
+    await create25Questions(assessment.id);
+
+    await prisma.skillAssessmentResult.createMany({
+      data: [
+        {
+          userId: jobSeeker.id,
+          assessmentId: assessment.id,
+          score: 80,
+          isPassed: true,
+          startedAt: new Date(Date.now() - 60 * 60 * 1000),
+          completedAt: new Date(Date.now() - 59 * 60 * 1000),
+        },
+        {
+          userId: jobSeeker.id,
+          assessmentId: assessment.id,
+          score: 60,
+          isPassed: false,
+          startedAt: new Date(Date.now() - 30 * 60 * 1000),
+          completedAt: new Date(Date.now() - 29 * 60 * 1000),
+        },
+      ],
+    });
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/start`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(403);
+
+    expect(response.body.message).toBe(
+      "Standard subscription allows a maximum of 2 skill assessment attempts",
+    );
+  });
+
+  it("Should allow Professional subscriber to take more than 2 assessment attempts", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Professional Unlimited User",
+        email: `professional-unlimited-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    await createActiveProfessionalSubscription(jobSeeker.id);
+
+    const assessment = await createTestAssessment();
+
+    await create25Questions(assessment.id);
+
+    await prisma.skillAssessmentResult.createMany({
+      data: [
+        {
+          userId: jobSeeker.id,
+          assessmentId: assessment.id,
+          score: 80,
+          isPassed: true,
+          startedAt: new Date(Date.now() - 90 * 60 * 1000),
+          completedAt: new Date(Date.now() - 89 * 60 * 1000),
+        },
+        {
+          userId: jobSeeker.id,
+          assessmentId: assessment.id,
+          score: 70,
+          isPassed: false,
+          startedAt: new Date(Date.now() - 60 * 60 * 1000),
+          completedAt: new Date(Date.now() - 59 * 60 * 1000),
+        },
+        {
+          userId: jobSeeker.id,
+          assessmentId: assessment.id,
+          score: 90,
+          isPassed: true,
+          startedAt: new Date(Date.now() - 30 * 60 * 1000),
+          completedAt: new Date(Date.now() - 29 * 60 * 1000),
+        },
+      ],
+    });
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/start`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(201);
+    expect(response.body.message).toBe("Assessment started successfully");
   });
 
   it("Should submit assessment successfully and pass", async () => {
