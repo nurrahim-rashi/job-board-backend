@@ -305,7 +305,22 @@ export const startAssessmentService = async (
   userId: number,
   assessmentId: number,
 ) => {
-  await checkActiveSubscription(userId);
+  const activeSubscription = await checkActiveSubscription(userId);
+
+  if (activeSubscription.subscription.name === "STANDARD") {
+    const usedAttempts = await prisma.skillAssessmentResult.count({
+      where: {
+        userId,
+      },
+    });
+
+    if (usedAttempts >= 2) {
+      throw new ApiError(
+        "Standard subscription allows a maximum of 2 skill assessment attempts",
+        403,
+      );
+    }
+  }
 
   const assessment = await prisma.skillAssessment.findUnique({
     where: {
