@@ -1,18 +1,19 @@
-import express from "express";
-import "dotenv/config";
 import cors from "cors";
+import "dotenv/config";
+import express from "express";
 import { corsOptions } from "./config/cors.js";
-import { reviewRoutes } from "./routes/review.routes.js";
-import { authRoutes } from "./routes/auth.routes.js";
-import { preSelectionTestRoutes } from "./routes/pre-selection-test.routes.js";
-import { applicantTestRoutes } from "./routes/applicant-test.routes.js";
-import { assessmentRoutes } from "./routes/assessment.routes.js";
-import { jobRoutes } from "./routes/job.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
-import { jobPostingRoutes } from "./routes/job-posting.routes.js";
-import { applicationRoutes } from "./routes/application.routes.js";
+import { applicantTestRoutes } from "./routes/applicant-test.routes.js";
 import { applicantRoutes } from "./routes/applicant.routes.js";
+import { applicationRoutes } from "./routes/application.routes.js";
+import { assessmentRoutes } from "./routes/assessment.routes.js";
+import { authRoutes } from "./routes/auth.routes.js";
 import { companyRoutes } from "./routes/company.routes.js";
+import { interviewRoutes } from "./routes/interview.routes.js";
+import { jobPostingRoutes } from "./routes/job-posting.routes.js";
+import { jobRoutes } from "./routes/job.routes.js";
+import { preSelectionTestRoutes } from "./routes/pre-selection-test.routes.js";
+import { reviewRoutes } from "./routes/review.routes.js";
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use("/jobs", jobRoutes);
 app.use("/jobs", applicantTestRoutes);
 app.use("/job-posting", preSelectionTestRoutes); 
 app.use("/job-posting", applicantRoutes);
+app.use("/job-posting", interviewRoutes);
 app.use("/job-posting", jobPostingRoutes);
 app.use("/companies", companyRoutes);
 app.use("/", applicationRoutes);
@@ -37,6 +39,5 @@ app.use("/", applicationRoutes);
 // errors
 app.use(errorHandler);
 
-// crons
 
 export default app;
