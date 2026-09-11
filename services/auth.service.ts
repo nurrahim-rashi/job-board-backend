@@ -24,6 +24,16 @@ const userSelect = {
   address: true,
   city: true,
   province: true,
+  professionalRole: true,
+  availability: true,
+  profileIntro: true,
+  salaryExpectation: true,
+  profileStory: true,
+  lookingFor: true,
+  skills: true,
+  profileLinks: true,
+  experiences: true,
+  selectedWork: true,
   authProvider: true,
   company: {
     select: {
@@ -31,6 +41,11 @@ const userSelect = {
       companyName: true,
       phone: true,
       profileContent: true,
+      tagline: true,
+      size: true,
+      founded: true,
+      values: true,
+      perks: true,
       logo: true,
       city: true,
     },
@@ -104,7 +119,11 @@ export async function registerUser(input: RegisterInput) {
     }
     return created;
   });
-  await sendVerificationEmail(user.id, user.email);
+  try {
+    await sendVerificationEmail(user.id, user.email);
+  } catch (err) {
+    console.error("Verification email failed for", user.email, err);
+  }
   return session(await getAuthenticatedUser(user.id));
 }
 
@@ -127,6 +146,19 @@ export async function getAuthenticatedUser(userId: number) {
   });
   if (!user) throw new ApiError("User not found", 404);
   return user;
+}
+
+export async function getSubscriptionStatus(userId: number) {
+  const subscription = await prisma.userSubscription.findFirst({
+    where: {
+      userId,
+      status: "ACTIVE",
+      endDate: { gte: new Date() },
+    },
+    select: { id: true },
+  });
+
+  return { active: Boolean(subscription) };
 }
 
 export async function verifyEmail(token: string) {
@@ -205,8 +237,18 @@ export async function updateProfile(userId: number, input: UpdateProfileInput) {
     (await prisma.user.findUnique({ where: { email: input.email } }))
   )
     throw new ApiError("Email is already registered", 409);
-  const { companyName, phone, profileContent, companyCity, ...userData } =
-    input;
+  const {
+    companyName,
+    phone,
+    profileContent,
+    companyCity,
+    companyTagline,
+    companySize,
+    companyFounded,
+    companyValues,
+    companyPerks,
+    ...userData
+  } = input;
   const emailChanged = Boolean(
     userData.email && userData.email !== current.email,
   );
@@ -226,7 +268,15 @@ export async function updateProfile(userId: number, input: UpdateProfileInput) {
     });
     if (
       current.role === UserRole.COMPANY_ADMIN &&
-      (companyName || phone || profileContent !== undefined || companyCity)
+      (companyName ||
+        phone ||
+        profileContent !== undefined ||
+        companyCity ||
+        companyTagline !== undefined ||
+        companySize !== undefined ||
+        companyFounded !== undefined ||
+        companyValues !== undefined ||
+        companyPerks !== undefined)
     ) {
       await transaction.company.update({
         where: { userId },
@@ -235,6 +285,11 @@ export async function updateProfile(userId: number, input: UpdateProfileInput) {
           ...(phone ? { phone } : {}),
           ...(profileContent !== undefined ? { profileContent } : {}),
           ...(companyCity ? { city: companyCity } : {}),
+          ...(companyTagline !== undefined ? { tagline: companyTagline } : {}),
+          ...(companySize !== undefined ? { size: companySize } : {}),
+          ...(companyFounded !== undefined ? { founded: companyFounded } : {}),
+          ...(companyValues !== undefined ? { values: companyValues } : {}),
+          ...(companyPerks !== undefined ? { perks: companyPerks } : {}),
         },
       });
     }

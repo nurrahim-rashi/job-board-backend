@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { createApplication, getMyApplicationDetail, getMyApplications } from "../services/application.service.js";
+import { createApplication, getMyApplicationDetail, getMyApplicationForJob, getMyApplications } from "../services/application.service.js";
 import { ApiError } from "../utils/api-error.js";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
 
@@ -23,4 +23,16 @@ export async function getMyApplicationDetailController(req: Request, res: Respon
     if (!Number.isInteger(id)) throw new ApiError("Application id is invalid", 400);
     res.status(200).json({ data: await getMyApplicationDetail((req as AuthenticatedRequest).user.id, id) });
   } catch (error) { next(error); }
+}
+
+export async function getMyJobApplicationController(req: Request, res: Response, next: NextFunction) {
+  try {
+    const data = await getMyApplicationForJob(
+      (req as AuthenticatedRequest).user.id,
+      String(req.params.slug),
+    );
+    res.status(200).json({ data });
+  } catch (error) {
+    next(error);
+  }
 }
