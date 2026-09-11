@@ -17,6 +17,7 @@ import { preSelectionTestRoutes } from "./routes/pre-selection-test.routes.js";
 import { reviewRoutes } from "./routes/review.routes.js";
 import { cvRoutes } from "./routes/cv.routes.js";
 import { profileRoutes } from "./routes/profile.routes.js";
+import { subscriptionRoutes } from "./routes/subscription.routes.js";
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use("/auth", authRoutes);
 app.use("/analytics", analyticsRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/assessment", assessmentRoutes);
+app.use("/subscriptions", subscriptionRoutes);
 app.use("/cv", cvRoutes);
 app.use("/jobs", jobRoutes); 
 app.use("/jobs", applicantTestRoutes);
