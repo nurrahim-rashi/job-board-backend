@@ -2,12 +2,14 @@ import express from "express";
 import {
   changePasswordController,
   forgotPasswordController,
+  homepageController,
   loginController,
   logoutController,
   meController,
   registerController,
   resendVerificationController,
   resetPasswordController,
+  subscriptionStatusController,
   updateProfileController,
   uploadAvatarController,
   verifyEmailController,
@@ -34,6 +36,8 @@ authRoutes.post("/resend-verification", validate(emailSchema), resendVerificatio
 authRoutes.post("/forgot-password", validate(emailSchema), forgotPasswordController);
 authRoutes.post("/reset-password", validate(resetPasswordSchema), resetPasswordController);
 authRoutes.get("/me", authenticated, meController);
+authRoutes.get("/homepage", authenticated, homepageController);
+authRoutes.get("/subscription-status", authenticated, subscriptionStatusController);
 authRoutes.patch("/profile", authenticated, validate(updateProfileSchema), updateProfileController);
 authRoutes.put("/avatar", authenticated, express.raw({ type: ["image/jpeg", "image/png"], limit: "1mb" }), uploadAvatarController);
 authRoutes.post("/change-password", authenticated, validate(changePasswordSchema), changePasswordController);

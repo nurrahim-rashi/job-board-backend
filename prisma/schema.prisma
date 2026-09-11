@@ -91,6 +91,16 @@ model User {
   city                       String?
   province                   String?
   avatar                     String?
+  professionalRole           String       @default("")
+  availability               String       @default("")
+  profileIntro               String       @default("") @db.Text
+  salaryExpectation          String       @default("")
+  profileStory               String       @default("") @db.Text
+  lookingFor                 String[]     @default([])
+  skills                     String[]     @default([])
+  profileLinks               Json?
+  experiences                Json?
+  selectedWork               Json?
   emailVerifiedAt            DateTime?
   emailVerificationTokenHash String?
   emailVerificationExpiresAt DateTime?
@@ -103,6 +113,7 @@ model User {
   jobApplications   JobApplication[]
   subscriptions     UserSubscription[]
   companyReviews    CompanyReview[]
+  companyFollows    CompanyFollow[]
   assessmentResults SkillAssessmentResult[]
   testResults       ApplicantTestResult[]
 
@@ -115,6 +126,11 @@ model Company {
   companyName    String
   phone          String
   profileContent String   @db.Text
+  tagline        String   @default("")
+  size           String   @default("")
+  founded        Int?
+  values         String[] @default([])
+  perks          String[] @default([])
   logo           String?
   city           String
   createdAt      DateTime @default(now())
@@ -123,6 +139,7 @@ model Company {
   user        User            @relation(fields: [userId], references: [id])
   jobPostings JobPosting[]
   reviews     CompanyReview[]
+  followers   CompanyFollow[]
 
   @@map("companies")
 }
@@ -157,6 +174,21 @@ model JobPosting {
   @@index([companyId, deletedAt])
   @@index([deletedAt, isPublished, deadline])
   @@map("job_postings")
+}
+
+model CompanyFollow {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  companyId Int
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([userId, createdAt])
+  @@index([companyId])
+  @@map("company_follows")
 }
 
 model JobApplication {

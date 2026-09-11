@@ -3,9 +3,11 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { type AuthenticatedRequest } from "../middlewares/auth.middleware.js";
+import { getHomepageData } from "../services/homepage.service.js";
 import {
   changePassword,
   getAuthenticatedUser,
+  getSubscriptionStatus,
   loginUser,
   registerUser,
   requestPasswordReset,
@@ -30,6 +32,16 @@ export async function loginController(req: Request, res: Response) {
 
 export async function meController(req: Request, res: Response) {
   return res.status(200).json({ data: await getAuthenticatedUser(userId(req)) });
+}
+
+export async function subscriptionStatusController(req: Request, res: Response) {
+  return res.status(200).json({
+    data: await getSubscriptionStatus(userId(req)),
+  });
+}
+
+export async function homepageController(req: Request, res: Response) {
+  return res.status(200).json({ data: await getHomepageData(userId(req)) });
 }
 
 export async function verifyEmailController(req: Request, res: Response) {

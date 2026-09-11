@@ -21,6 +21,18 @@ export async function getMyApplications(userId: number) {
   return prisma.jobApplication.findMany({ where: { userId }, include: applicationInclude, orderBy: { createdAt: "desc" } });
 }
 
+export async function getMyApplicationForJob(userId: number, slug: string) {
+  return prisma.jobApplication.findFirst({
+    where: { userId, job: { slug } },
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+      rejectionReason: true,
+    },
+  });
+}
+
 export async function getMyApplicationDetail(userId: number, applicationId: number) {
   const application = await prisma.jobApplication.findFirst({ where: { id: applicationId, userId }, include: applicationInclude });
   if (!application) throw new ApiError("Application not found", 404);

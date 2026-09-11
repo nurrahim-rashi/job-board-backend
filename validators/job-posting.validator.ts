@@ -1,6 +1,8 @@
 import z from "zod";
 import { JobCategory } from "../generated/prisma/enums.js";
 
+const MAX_DATABASE_INTEGER = 2_147_483_647;
+
 const jobFields = z.object({
   title: z.string().trim().min(1, "Job title is required"),
   description: z.string().trim().min(1, "description is required"),
@@ -12,11 +14,19 @@ const jobFields = z.object({
     .number()
     .int()
     .positive("Minimum salary should be greater than 0")
+    .max(
+      MAX_DATABASE_INTEGER,
+      "Minimum salary cannot exceed 2,147,483,647",
+    )
     .optional(),
   salaryMax: z.coerce
     .number()
     .int()
     .positive("Maximum salary should be greater than 0")
+    .max(
+      MAX_DATABASE_INTEGER,
+      "Maximum salary cannot exceed 2,147,483,647",
+    )
     .optional(),
   tags: z.preprocess(
     (value) => (typeof value === "string" ? value.split(",") : value),
