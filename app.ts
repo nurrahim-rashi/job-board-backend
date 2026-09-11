@@ -3,6 +3,7 @@ import "dotenv/config";
 import express from "express";
 import { corsOptions } from "./config/cors.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
+import { analyticsRoutes } from "./routes/analytics.routes.js";
 import { applicantTestRoutes } from "./routes/applicant-test.routes.js";
 import { applicantRoutes } from "./routes/applicant.routes.js";
 import { applicationRoutes } from "./routes/application.routes.js";
@@ -26,6 +27,7 @@ app.use("/uploads", express.static("uploads"));
 
 // entry points
 app.use("/auth", authRoutes);
+app.use("/analytics", analyticsRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/assessment", assessmentRoutes);
 app.use("/cv", cvRoutes);

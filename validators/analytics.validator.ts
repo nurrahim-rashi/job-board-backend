@@ -1,0 +1,17 @@
+import { z } from "zod";
+import { JobCategory } from "../generated/prisma/enums.js";
+
+export const analyticsQuerySchema = z.object({
+  months: z.coerce
+    .number()
+    .int()
+    .min(3, "Minimum range is 3 months")
+    .max(24, "Maximum range is 24 months")
+    .default(6),
+  category: z
+    .enum(JobCategory, { error: () => "Unknown job category" })
+    .optional(),
+  limit: z.coerce.number().int().min(3).max(20).default(8),
+});
+
+export type AnalyticsQueryInput = z.infer<typeof analyticsQuerySchema>;
