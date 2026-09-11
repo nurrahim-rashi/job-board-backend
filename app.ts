@@ -14,6 +14,7 @@ import { jobPostingRoutes } from "./routes/job-posting.routes.js";
 import { jobRoutes } from "./routes/job.routes.js";
 import { preSelectionTestRoutes } from "./routes/pre-selection-test.routes.js";
 import { reviewRoutes } from "./routes/review.routes.js";
+import { cvRoutes } from "./routes/cv.routes.js";
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use("/uploads", express.static("uploads"));
 app.use("/auth", authRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/assessment", assessmentRoutes);
+app.use("/cv", cvRoutes);
 app.use("/jobs", jobRoutes); 
 app.use("/jobs", applicantTestRoutes);
 app.use("/job-posting", preSelectionTestRoutes); 
