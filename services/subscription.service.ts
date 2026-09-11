@@ -3,6 +3,9 @@ import { ApiError } from "../utils/api-error.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { SubscriptionName, UserRole } from "../generated/prisma/enums.js";
 import type { UpdateSubscriptionSchema } from "../validators/subscription.validator.js";
+import { randomUUID } from "crypto";
+import { midtransSnap } from "../lib/midtrans.js";
+import type { PurchaseSubscriptionSchema } from "../validators/subscription-purchase.validator.js";
 
 export const getSubscriptionPlansService = async () => {
   return prisma.subscription.findMany({
@@ -78,4 +81,94 @@ export const updateSubscriptionPlanService = async (
       }),
     },
   });
+};
+
+export const purchaseSubscriptionService = async (
+  userId: number,
+  userRole: UserRole,
+  data: PurchaseSubscriptionSchema,
+) => {
+  if (userRole !== "JOB_SEEKER") {
+    throw new ApiError("Only job seekers can purchase subscription plans", 403);
+  }
+
+  const subscription = await prisma.subscription.findUnique({
+    where: {
+      name: data.plan,
+    },
+  });
+
+  if (!subscription) {
+    throw new ApiError("Subscription plan not found", 404);
+  }
+
+  const existingPendingSubscription = await prisma.userSubscription.findFirst({
+    where: {
+      userId,
+      status: "PENDING_APPROVAL",
+    },
+  });
+
+  if (existingPendingSubscription) {
+    throw new ApiError("You already have a pending subscription payment", 409);
+  }
+
+  const existingActiveSubscription = await prisma.userSubscription.findFirst({
+    where: {
+      userId,
+      status: "ACTIVE",
+      endDate: {
+        gte: new Date(),
+      },
+    },
+  });
+
+  if (existingActiveSubscription) {
+    throw new ApiError("You already have an active subscription", 409);
+  }
+
+  const orderId = `SUB-${userId}-${Date.now()}-${randomUUID().slice(0, 8)}`;
+
+  const midtransParameter = {
+    transaction_details: {
+      order_id: orderId,
+      gross_amount: subscription.price,
+    },
+    item_details: [
+      {
+        id: String(subscription.id),
+        price: subscription.price,
+        quantity: 1,
+        name: `${subscription.name} Subscription`,
+      },
+    ],
+  };
+
+  const transaction = await midtransSnap.createTransaction(
+    midtransParameter as any,
+  );
+
+  const userSubscription = await prisma.userSubscription.create({
+    data: {
+      userId,
+      subscriptionId: subscription.id,
+      status: "PENDING_APPROVAL",
+      midtransOrderId: orderId,
+      midtransSnapToken: transaction.token,
+      midtransRedirectUrl: transaction.redirect_url,
+      paymentStatus: "pending",
+    },
+    include: {
+      subscription: true,
+    },
+  });
+
+  return {
+    subscription: userSubscription,
+    payment: {
+      orderId,
+      snapToken: transaction.token,
+      redirectUrl: transaction.redirect_url,
+    },
+  };
 };

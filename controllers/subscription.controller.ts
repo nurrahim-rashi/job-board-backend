@@ -3,6 +3,7 @@ import {
   getSubscriptionPlansService,
   getDeveloperSubscriptionPlansService,
   updateSubscriptionPlanService,
+  purchaseSubscriptionService,
 } from "../services/subscription.service.js";
 
 export const getSubscriptionPlansController = async (
@@ -47,5 +48,20 @@ export const updateSubscriptionPlanController = async (
   return res.status(200).json({
     message: "Subscription plan updated successfully",
     data: subscription,
+  });
+};
+
+export const purchaseSubscriptionController = async (
+  req: Request,
+  res: Response,
+) => {
+  const userId = res.locals.user.id;
+  const userRole = res.locals.user.role;
+
+  const result = await purchaseSubscriptionService(userId, userRole, req.body);
+
+  return res.status(201).json({
+    message: "Subscription payment created successfully",
+    data: result,
   });
 };
