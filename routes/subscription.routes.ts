@@ -5,8 +5,10 @@ import {
   getSubscriptionPlansController,
   getDeveloperSubscriptionPlansController,
   updateSubscriptionPlanController,
+  purchaseSubscriptionController,
 } from "../controllers/subscription.controller.js";
 import { updateSubscriptionSchema } from "../validators/subscription.validator.js";
+import { purchaseSubscriptionSchema } from "../validators/subscription-purchase.validator.js";
 
 export const subscriptionRoutes = express.Router();
 
@@ -23,4 +25,11 @@ subscriptionRoutes.patch(
   verifyToken(process.env.JWT_SECRET!),
   validate(updateSubscriptionSchema),
   updateSubscriptionPlanController,
+);
+
+subscriptionRoutes.post(
+  "/purchase",
+  verifyToken(process.env.JWT_SECRET!),
+  validate(purchaseSubscriptionSchema),
+  purchaseSubscriptionController,
 );

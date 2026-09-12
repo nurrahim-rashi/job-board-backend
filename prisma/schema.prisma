@@ -304,10 +304,16 @@ model UserSubscription {
   subscriptionId Int
   paymentProof   String?
   status         UserSubscriptionStatus @default(PENDING_APPROVAL)
-  startDate      DateTime?
-  endDate        DateTime?
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
+
+  midtransOrderId     String? @unique
+  midtransSnapToken   String?
+  midtransRedirectUrl String?
+  paymentStatus       String?
+
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   user         User         @relation(fields: [userId], references: [id])
   subscription Subscription @relation(fields: [subscriptionId], references: [id])
