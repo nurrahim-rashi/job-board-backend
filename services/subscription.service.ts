@@ -6,6 +6,7 @@ import type { UpdateSubscriptionSchema } from "../validators/subscription.valida
 import { randomUUID } from "crypto";
 import { midtransSnap } from "../lib/midtrans.js";
 import type { PurchaseSubscriptionSchema } from "../validators/subscription-purchase.validator.js";
+import type { MidtransNotificationResponse } from "../types/midtrans.js";
 
 export const getSubscriptionPlansService = async () => {
   return prisma.subscription.findMany({
@@ -106,6 +107,7 @@ export const purchaseSubscriptionService = async (
     where: {
       userId,
       status: "PENDING_APPROVAL",
+      paymentStatus: "pending",
     },
   });
 
@@ -170,5 +172,114 @@ export const purchaseSubscriptionService = async (
       snapToken: transaction.token,
       redirectUrl: transaction.redirect_url,
     },
+  };
+};
+
+export const handleMidtransNotificationService = async (
+  notificationBody: unknown,
+) => {
+  const statusResponse = (await (midtransSnap as any).transaction.notification(
+    notificationBody,
+  )) as MidtransNotificationResponse;
+
+  const orderId = statusResponse.order_id;
+  const transactionStatus = statusResponse.transaction_status;
+  const fraudStatus = statusResponse.fraud_status;
+
+  const userSubscription = await prisma.userSubscription.findUnique({
+    where: {
+      midtransOrderId: orderId,
+    },
+    include: {
+      subscription: true,
+    },
+  });
+
+  if (!userSubscription) {
+    throw new ApiError("Subscription transaction not found", 404);
+  }
+
+  const isSuccessfulPayment =
+    transactionStatus === "settlement" ||
+    (transactionStatus === "capture" && fraudStatus === "accept");
+
+  if (isSuccessfulPayment) {
+    // Midtrans may retry the same webhook.
+    // Do not reset the subscription period if it is already active.
+    if (userSubscription.status === "ACTIVE") {
+      return userSubscription;
+    }
+
+    const startDate = new Date();
+    const endDate = new Date(startDate);
+
+    endDate.setDate(
+      endDate.getDate() + userSubscription.subscription.durationDays,
+    );
+
+    return prisma.userSubscription.update({
+      where: {
+        id: userSubscription.id,
+      },
+      data: {
+        status: "ACTIVE",
+        paymentStatus: transactionStatus,
+        startDate,
+        endDate,
+      },
+      include: {
+        subscription: true,
+      },
+    });
+  }
+
+  if (
+    transactionStatus === "deny" ||
+    transactionStatus === "cancel" ||
+    transactionStatus === "expire"
+  ) {
+    return prisma.userSubscription.update({
+      where: {
+        id: userSubscription.id,
+      },
+      data: {
+        paymentStatus: transactionStatus,
+      },
+      include: {
+        subscription: true,
+      },
+    });
+  }
+
+  return prisma.userSubscription.update({
+    where: {
+      id: userSubscription.id,
+    },
+    data: {
+      paymentStatus: transactionStatus,
+    },
+    include: {
+      subscription: true,
+    },
+  });
+};
+
+export const expireSubscriptionsService = async () => {
+  const now = new Date();
+
+  const result = await prisma.userSubscription.updateMany({
+    where: {
+      status: "ACTIVE",
+      endDate: {
+        lte: now,
+      },
+    },
+    data: {
+      status: "EXPIRED",
+    },
+  });
+
+  return {
+    expired: result.count,
   };
 };

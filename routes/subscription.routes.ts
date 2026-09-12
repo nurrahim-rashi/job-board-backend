@@ -6,6 +6,7 @@ import {
   getDeveloperSubscriptionPlansController,
   updateSubscriptionPlanController,
   purchaseSubscriptionController,
+  midtransNotificationController,
 } from "../controllers/subscription.controller.js";
 import { updateSubscriptionSchema } from "../validators/subscription.validator.js";
 import { purchaseSubscriptionSchema } from "../validators/subscription-purchase.validator.js";
@@ -32,4 +33,9 @@ subscriptionRoutes.post(
   verifyToken(process.env.JWT_SECRET!),
   validate(purchaseSubscriptionSchema),
   purchaseSubscriptionController,
+);
+
+subscriptionRoutes.post(
+  "/payment-notification",
+  midtransNotificationController,
 );

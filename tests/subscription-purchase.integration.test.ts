@@ -258,6 +258,7 @@ describe("POST /subscriptions/purchase", () => {
         userId: user.id,
         subscriptionId: standard.id,
         status: "PENDING_APPROVAL",
+        paymentStatus: "pending",
       },
     });
 
