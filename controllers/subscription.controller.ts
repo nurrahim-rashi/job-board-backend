@@ -4,6 +4,7 @@ import {
   getDeveloperSubscriptionPlansService,
   updateSubscriptionPlanService,
   purchaseSubscriptionService,
+  handleMidtransNotificationService,
 } from "../services/subscription.service.js";
 
 export const getSubscriptionPlansController = async (
@@ -62,6 +63,18 @@ export const purchaseSubscriptionController = async (
 
   return res.status(201).json({
     message: "Subscription payment created successfully",
+    data: result,
+  });
+};
+
+export const midtransNotificationController = async (
+  req: Request,
+  res: Response,
+) => {
+  const result = await handleMidtransNotificationService(req.body);
+
+  return res.status(200).json({
+    message: "Payment notification processed successfully",
     data: result,
   });
 };
