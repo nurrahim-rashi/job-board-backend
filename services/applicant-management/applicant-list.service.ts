@@ -1,6 +1,9 @@
 import type { Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
-import { buildBirthDateFilter, calculateAge } from "../../utils/applicant.util.js";
+import {
+  buildBirthDateFilter,
+  calculateAge,
+} from "../../utils/applicant.util.js";
 import { ApplicantQueryInput } from "../../validators/applicant.validator.js";
 
 export const getApplicantListService = async (
@@ -44,29 +47,127 @@ export const getApplicantListService = async (
   const orderBy: Prisma.JobApplicationOrderByWithRelationInput =
     sortBy === "name" ? { user: { name: sortOrder } } : { [sortBy]: sortOrder };
 
-  const [applications, total] = await prisma.$transaction([
-    prisma.jobApplication.findMany({
+  const now = new Date();
+
+  const prioritySubscriptionFilter: Prisma.UserSubscriptionWhereInput = {
+    status: "ACTIVE",
+    endDate: {
+      gte: now,
+    },
+    subscription: {
+      name: "PROFESSIONAL",
+    },
+  };
+
+  const priorityWhere: Prisma.JobApplicationWhereInput = {
+    AND: [
       where,
-      orderBy,
-      skip: (page - 1) * limit,
-      take: limit,
-      include: {
+      {
         user: {
-          select: {
-            id: true,
-            name: true,
-            avatar: true,
-            birthDate: true,
-            lastEducation: true,
+          subscriptions: {
+            some: prioritySubscriptionFilter,
           },
         },
-        testResult: {
-          select: { score: true, submittedAt: true },
+      },
+    ],
+  };
+
+  const regularWhere: Prisma.JobApplicationWhereInput = {
+    AND: [
+      where,
+      {
+        user: {
+          subscriptions: {
+            none: prioritySubscriptionFilter,
+          },
         },
       },
+    ],
+  };
+
+  const [priorityCount, regularCount] = await prisma.$transaction([
+    prisma.jobApplication.count({
+      where: priorityWhere,
     }),
-    prisma.jobApplication.count({ where }),
+    prisma.jobApplication.count({
+      where: regularWhere,
+    }),
   ]);
+
+  const offset = (page - 1) * limit;
+
+  let prioritySkip = 0;
+  let priorityTake = 0;
+  let regularSkip = 0;
+  let regularTake = 0;
+
+  if (offset < priorityCount) {
+    prioritySkip = offset;
+    priorityTake = Math.min(limit, priorityCount - offset);
+    regularTake = limit - priorityTake;
+  } else {
+    regularSkip = offset - priorityCount;
+    regularTake = limit;
+  }
+
+  const [priorityApplications, regularApplications] = await prisma.$transaction(
+    [
+      prisma.jobApplication.findMany({
+        where: priorityWhere,
+        orderBy,
+        skip: prioritySkip,
+        take: priorityTake,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+              birthDate: true,
+              lastEducation: true,
+            },
+          },
+          testResult: {
+            select: { score: true, submittedAt: true },
+          },
+        },
+      }),
+
+      prisma.jobApplication.findMany({
+        where: regularWhere,
+        orderBy,
+        skip: regularSkip,
+        take: regularTake,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+              birthDate: true,
+              lastEducation: true,
+            },
+          },
+          testResult: {
+            select: { score: true, submittedAt: true },
+          },
+        },
+      }),
+    ],
+  );
+
+  const applications = [
+    ...priorityApplications.map((application) => ({
+      ...application,
+      priorityReview: true,
+    })),
+    ...regularApplications.map((application) => ({
+      ...application,
+      priorityReview: false,
+    })),
+  ];
+
+  const total = priorityCount + regularCount;
 
   return {
     data: applications.map((application) => ({
@@ -75,6 +176,7 @@ export const getApplicantListService = async (
       expectedSalary: application.expectedSalary,
       cvFile: application.cvFile,
       appliedAt: application.createdAt,
+      priorityReview: application.priorityReview,
       applicant: {
         id: application.user.id,
         name: application.user.name,
