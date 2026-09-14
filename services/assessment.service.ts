@@ -703,6 +703,47 @@ export const generateAssessmentCertificateService = async (
   };
 };
 
+export const verifyAssessmentCertificateService = async (
+  certificateCode: string,
+) => {
+  const result = await prisma.skillAssessmentResult.findUnique({
+    where: {
+      certificateCode,
+    },
+    select: {
+      certificateCode: true,
+      score: true,
+      isPassed: true,
+      completedAt: true,
+      user: {
+        select: {
+          name: true,
+        },
+      },
+      assessment: {
+        select: {
+          skillName: true,
+          title: true,
+        },
+      },
+    },
+  });
+
+  if (!result || !result.isPassed || !result.completedAt) {
+    throw new ApiError("Certificate not found", 404);
+  }
+
+  return {
+    valid: true,
+    certificateCode: result.certificateCode,
+    recipientName: result.user.name,
+    assessmentTitle: result.assessment.title,
+    skillName: result.assessment.skillName,
+    score: result.score,
+    issuedAt: result.completedAt,
+  };
+};
+
 export const getDeveloperAssessmentsService = async (userRole: UserRole) => {
   if (userRole !== "DEVELOPER") {
     throw new ApiError("Only developer accounts can manage assessments", 403);

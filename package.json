@@ -20,6 +20,7 @@
     "@types/node": "^26.2.0",
     "@types/pdfkit": "^0.17.6",
     "@types/pg": "^8.21.0",
+    "@types/qrcode": "^1.5.6",
     "@types/supertest": "^7.2.1",
     "prisma": "^7.9.1",
     "prisma-erd-generator": "^3.2.1",
@@ -44,6 +45,7 @@
     "node-cron": "^4.6.0",
     "pdfkit": "^0.20.1",
     "pg": "^8.23.0",
+    "qrcode": "^1.5.4",
     "zod": "^4.4.3"
   }
 }

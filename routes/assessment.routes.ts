@@ -22,6 +22,7 @@ import {
   getUserAssessmentResultDetailController,
   generateAssessmentCertificateController,
   getDeveloperAssessmentsController,
+  verifyAssessmentCertificateController,
   getPublicSkillNamesController,
 } from "../controllers/assessment.controller.js";
 import { downloadAssessmentCertificateController } from "../controllers/assessment-certificate.controller.js";
@@ -53,6 +54,11 @@ assessmentRoutes.get(
   "/results",
   verifyToken(process.env.JWT_SECRET!),
   getUserAssessmentResultsController,
+);
+
+assessmentRoutes.get(
+  "/certificates/verify/:certificateCode",
+  verifyAssessmentCertificateController,
 );
 
 assessmentRoutes.post(
