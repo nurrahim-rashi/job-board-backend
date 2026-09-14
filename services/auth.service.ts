@@ -353,12 +353,30 @@ export async function updateProfile(userId: number, input: UpdateProfileInput) {
           ...(companyValues !== undefined ? { values: companyValues } : {}),
           ...(companyPerks !== undefined ? { perks: companyPerks } : {}),
         },
+        select: { id: true },
       });
     }
   });
   const updated = await getAuthenticatedUser(userId);
   if (emailChanged) await sendVerificationEmail(userId, updated.email);
   return updated;
+}
+
+export async function updateCompanyMedia(
+  userId: number,
+  field: "logo" | "banner",
+  url: string | null,
+) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!user || user.role !== UserRole.COMPANY_ADMIN) {
+    throw new ApiError("Only company admins can update company media", 403);
+  }
+  await prisma.company.update({
+    where: { userId },
+    data: { [field]: url },
+    select: { id: true },
+  });
+  return getAuthenticatedUser(userId);
 }
 
 export async function changePassword(

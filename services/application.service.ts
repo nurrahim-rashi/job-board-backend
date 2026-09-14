@@ -1,8 +1,9 @@
+import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../utils/api-error.js";
 
 const applicationInclude = {
-  job: { select: { id: true, slug: true, title: true, cityLocation: true, category: true, company: { select: { id: true, companyName: true, logo: true } } } },
+  job: { select: { id: true, slug: true, title: true, cityLocation: true, category: true, salaryMin: true, salaryMax: true, deadline: true, company: { select: { id: true, companyName: true, logo: true } } } },
   interview: true,
 } as const;
 
@@ -36,5 +37,30 @@ export async function getMyApplicationForJob(userId: number, slug: string) {
 export async function getMyApplicationDetail(userId: number, applicationId: number) {
   const application = await prisma.jobApplication.findFirst({ where: { id: applicationId, userId }, include: applicationInclude });
   if (!application) throw new ApiError("Application not found", 404);
-  return application;
+  let expectedSalaryRequestedAt: Date | null = null;
+  try {
+    const [request] = await prisma.$queryRaw<Array<{ expectedSalaryRequestedAt: Date | null }>>(Prisma.sql`
+      SELECT "expectedSalaryRequestedAt"
+      FROM "job_applications"
+      WHERE "id" = ${applicationId}
+    `);
+    expectedSalaryRequestedAt = request?.expectedSalaryRequestedAt ?? null;
+  } catch {
+    // Keep the existing application detail available before the migration is deployed.
+  }
+  return { ...application, expectedSalaryRequestedAt };
+}
+
+export async function submitRequestedExpectedSalary(userId: number, applicationId: number, expectedSalary: number) {
+  const updated = await prisma.$queryRaw<Array<{ id: number; expectedSalary: number }>>(Prisma.sql`
+    UPDATE "job_applications"
+    SET "expectedSalary" = ${expectedSalary}, "updatedAt" = NOW()
+    WHERE "id" = ${applicationId}
+      AND "userId" = ${userId}
+      AND "expectedSalary" IS NULL
+      AND "expectedSalaryRequestedAt" IS NOT NULL
+    RETURNING "id", "expectedSalary"
+  `);
+  if (!updated.length) throw new ApiError("Expected salary request was not found or has already been answered", 400);
+  return updated[0];
 }

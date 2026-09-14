@@ -128,67 +128,71 @@
 <!-- companies -->
 <g id="node2" class="node">
 <title>companies</title>
-<polygon fill="#e8eaf6" stroke="none" points="472.17,-1306.8 472.17,-1334 598.69,-1334 598.69,-1306.8 472.17,-1306.8"/>
-<polygon fill="none" stroke="black" points="472.17,-1306.8 472.17,-1334 598.69,-1334 598.69,-1306.8 472.17,-1306.8"/>
-<text xml:space="preserve" text-anchor="start" x="506.7" y="-1318.1" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="11.00">companies</text>
-<polygon fill="none" stroke="black" points="472.17,-1279.6 472.17,-1306.8 598.69,-1306.8 598.69,-1279.6 472.17,-1279.6"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-1290.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">Int</text>
-<text xml:space="preserve" text-anchor="start" x="491.4" y="-1290.9" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;id </text>
-<text xml:space="preserve" text-anchor="start" x="509.13" y="-1290.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#8a94a6">PK</text>
-<polygon fill="none" stroke="black" points="472.17,-1252.4 472.17,-1279.6 598.69,-1279.6 598.69,-1252.4 472.17,-1252.4"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-1263.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">Int</text>
-<text xml:space="preserve" text-anchor="start" x="491.4" y="-1263.7" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;userId</text>
-<polygon fill="none" stroke="black" points="472.17,-1225.2 472.17,-1252.4 598.69,-1252.4 598.69,-1225.2 472.17,-1225.2"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-1236.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
-<text xml:space="preserve" text-anchor="start" x="507.91" y="-1236.5" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;companyName</text>
-<polygon fill="none" stroke="black" points="472.17,-1198 472.17,-1225.2 598.69,-1225.2 598.69,-1198 472.17,-1198"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-1209.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
-<text xml:space="preserve" text-anchor="start" x="507.91" y="-1209.3" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;phone</text>
-<polygon fill="none" stroke="black" points="472.17,-1170.8 472.17,-1198 598.69,-1198 598.69,-1170.8 472.17,-1170.8"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-1182.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
-<text xml:space="preserve" text-anchor="start" x="507.91" y="-1182.1" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;profileContent</text>
-<polygon fill="none" stroke="black" points="472.17,-1143.6 472.17,-1170.8 598.69,-1170.8 598.69,-1143.6 472.17,-1143.6"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-1154.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
-<text xml:space="preserve" text-anchor="start" x="507.91" y="-1154.9" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;tagline</text>
-<polygon fill="none" stroke="black" points="472.17,-1116.4 472.17,-1143.6 598.69,-1143.6 598.69,-1116.4 472.17,-1116.4"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-1127.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
-<text xml:space="preserve" text-anchor="start" x="507.91" y="-1127.7" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;size</text>
-<polygon fill="none" stroke="black" points="472.17,-1089.2 472.17,-1116.4 598.69,-1116.4 598.69,-1089.2 472.17,-1089.2"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-1100.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">Int</text>
-<text xml:space="preserve" text-anchor="start" x="491.4" y="-1100.5" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;founded </text>
-<text xml:space="preserve" text-anchor="start" x="540.33" y="-1100.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#8a94a6">nullable</text>
-<polygon fill="none" stroke="black" points="472.17,-1062 472.17,-1089.2 598.69,-1089.2 598.69,-1062 472.17,-1062"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-1073.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
-<text xml:space="preserve" text-anchor="start" x="507.91" y="-1073.3" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;website</text>
-<polygon fill="none" stroke="black" points="472.17,-1034.8 472.17,-1062 598.69,-1062 598.69,-1034.8 472.17,-1034.8"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-1046.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">Json</text>
-<text xml:space="preserve" text-anchor="start" x="502.41" y="-1046.1" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;products </text>
-<text xml:space="preserve" text-anchor="start" x="553.77" y="-1046.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#8a94a6">nullable</text>
-<polygon fill="none" stroke="black" points="472.17,-1007.6 472.17,-1034.8 598.69,-1034.8 598.69,-1007.6 472.17,-1007.6"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-1018.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
-<text xml:space="preserve" text-anchor="start" x="507.91" y="-1018.9" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;values</text>
-<polygon fill="none" stroke="black" points="472.17,-980.4 472.17,-1007.6 598.69,-1007.6 598.69,-980.4 472.17,-980.4"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-991.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
-<text xml:space="preserve" text-anchor="start" x="507.91" y="-991.7" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;perks</text>
-<polygon fill="none" stroke="black" points="472.17,-953.2 472.17,-980.4 598.69,-980.4 598.69,-953.2 472.17,-953.2"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-964.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
-<text xml:space="preserve" text-anchor="start" x="507.91" y="-964.5" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;logo </text>
-<text xml:space="preserve" text-anchor="start" x="537.87" y="-964.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#8a94a6">nullable</text>
-<polygon fill="none" stroke="black" points="472.17,-926 472.17,-953.2 598.69,-953.2 598.69,-926 472.17,-926"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-937.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
-<text xml:space="preserve" text-anchor="start" x="507.91" y="-937.3" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;city</text>
-<polygon fill="none" stroke="black" points="472.17,-898.8 472.17,-926 598.69,-926 598.69,-898.8 472.17,-898.8"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-910.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">DateTime</text>
-<text xml:space="preserve" text-anchor="start" x="526.85" y="-910.1" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;createdAt</text>
-<polygon fill="none" stroke="black" points="472.17,-871.6 472.17,-898.8 598.69,-898.8 598.69,-871.6 472.17,-871.6"/>
-<text xml:space="preserve" text-anchor="start" x="479.17" y="-882.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">DateTime</text>
-<text xml:space="preserve" text-anchor="start" x="526.85" y="-882.9" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;updatedAt</text>
+<polygon fill="#e8eaf6" stroke="none" points="472.17,-1306.4 472.17,-1333.6 598.69,-1333.6 598.69,-1306.4 472.17,-1306.4"/>
+<polygon fill="none" stroke="black" points="472.17,-1306.4 472.17,-1333.6 598.69,-1333.6 598.69,-1306.4 472.17,-1306.4"/>
+<text xml:space="preserve" text-anchor="start" x="506.7" y="-1317.7" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="11.00">companies</text>
+<polygon fill="none" stroke="black" points="472.17,-1279.2 472.17,-1306.4 598.69,-1306.4 598.69,-1279.2 472.17,-1279.2"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-1290.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">Int</text>
+<text xml:space="preserve" text-anchor="start" x="491.4" y="-1290.5" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;id </text>
+<text xml:space="preserve" text-anchor="start" x="509.13" y="-1290.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#8a94a6">PK</text>
+<polygon fill="none" stroke="black" points="472.17,-1252 472.17,-1279.2 598.69,-1279.2 598.69,-1252 472.17,-1252"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-1263.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">Int</text>
+<text xml:space="preserve" text-anchor="start" x="491.4" y="-1263.3" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;userId</text>
+<polygon fill="none" stroke="black" points="472.17,-1224.8 472.17,-1252 598.69,-1252 598.69,-1224.8 472.17,-1224.8"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-1236.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
+<text xml:space="preserve" text-anchor="start" x="507.91" y="-1236.1" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;companyName</text>
+<polygon fill="none" stroke="black" points="472.17,-1197.6 472.17,-1224.8 598.69,-1224.8 598.69,-1197.6 472.17,-1197.6"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-1208.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
+<text xml:space="preserve" text-anchor="start" x="507.91" y="-1208.9" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;phone</text>
+<polygon fill="none" stroke="black" points="472.17,-1170.4 472.17,-1197.6 598.69,-1197.6 598.69,-1170.4 472.17,-1170.4"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-1181.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
+<text xml:space="preserve" text-anchor="start" x="507.91" y="-1181.7" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;profileContent</text>
+<polygon fill="none" stroke="black" points="472.17,-1143.2 472.17,-1170.4 598.69,-1170.4 598.69,-1143.2 472.17,-1143.2"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-1154.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
+<text xml:space="preserve" text-anchor="start" x="507.91" y="-1154.5" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;tagline</text>
+<polygon fill="none" stroke="black" points="472.17,-1116 472.17,-1143.2 598.69,-1143.2 598.69,-1116 472.17,-1116"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-1127.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
+<text xml:space="preserve" text-anchor="start" x="507.91" y="-1127.3" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;size</text>
+<polygon fill="none" stroke="black" points="472.17,-1088.8 472.17,-1116 598.69,-1116 598.69,-1088.8 472.17,-1088.8"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-1100.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">Int</text>
+<text xml:space="preserve" text-anchor="start" x="491.4" y="-1100.1" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;founded </text>
+<text xml:space="preserve" text-anchor="start" x="540.33" y="-1100.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#8a94a6">nullable</text>
+<polygon fill="none" stroke="black" points="472.17,-1061.6 472.17,-1088.8 598.69,-1088.8 598.69,-1061.6 472.17,-1061.6"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-1072.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
+<text xml:space="preserve" text-anchor="start" x="507.91" y="-1072.9" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;website</text>
+<polygon fill="none" stroke="black" points="472.17,-1034.4 472.17,-1061.6 598.69,-1061.6 598.69,-1034.4 472.17,-1034.4"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-1045.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">Json</text>
+<text xml:space="preserve" text-anchor="start" x="502.41" y="-1045.7" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;products </text>
+<text xml:space="preserve" text-anchor="start" x="553.77" y="-1045.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#8a94a6">nullable</text>
+<polygon fill="none" stroke="black" points="472.17,-1007.2 472.17,-1034.4 598.69,-1034.4 598.69,-1007.2 472.17,-1007.2"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-1018.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
+<text xml:space="preserve" text-anchor="start" x="507.91" y="-1018.5" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;values</text>
+<polygon fill="none" stroke="black" points="472.17,-980 472.17,-1007.2 598.69,-1007.2 598.69,-980 472.17,-980"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-991.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
+<text xml:space="preserve" text-anchor="start" x="507.91" y="-991.3" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;perks</text>
+<polygon fill="none" stroke="black" points="472.17,-952.8 472.17,-980 598.69,-980 598.69,-952.8 472.17,-952.8"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-964.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
+<text xml:space="preserve" text-anchor="start" x="507.91" y="-964.1" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;logo </text>
+<text xml:space="preserve" text-anchor="start" x="537.87" y="-964.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#8a94a6">nullable</text>
+<polygon fill="none" stroke="black" points="472.17,-925.6 472.17,-952.8 598.69,-952.8 598.69,-925.6 472.17,-925.6"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-936.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
+<text xml:space="preserve" text-anchor="start" x="507.91" y="-936.9" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;banner </text>
+<text xml:space="preserve" text-anchor="start" x="551.33" y="-936.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#8a94a6">nullable</text>
+<polygon fill="none" stroke="black" points="472.17,-898.4 472.17,-925.6 598.69,-925.6 598.69,-898.4 472.17,-898.4"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-909.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">String</text>
+<text xml:space="preserve" text-anchor="start" x="507.91" y="-909.7" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;city</text>
+<polygon fill="none" stroke="black" points="472.17,-871.2 472.17,-898.4 598.69,-898.4 598.69,-871.2 472.17,-871.2"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-882.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">DateTime</text>
+<text xml:space="preserve" text-anchor="start" x="526.85" y="-882.5" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;createdAt</text>
+<polygon fill="none" stroke="black" points="472.17,-844 472.17,-871.2 598.69,-871.2 598.69,-844 472.17,-844"/>
+<text xml:space="preserve" text-anchor="start" x="479.17" y="-855.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#5a6472">DateTime</text>
+<text xml:space="preserve" text-anchor="start" x="526.85" y="-855.3" font-family="Helvetica,sans-Serif" font-size="11.00"> &#160;updatedAt</text>
 </g>
 <!-- users&#45;&gt;companies -->
 <g id="edge4" class="edge">
 <title>users&#45;&gt;companies</title>
-<path fill="none" stroke="#7a8494" d="M252.48,-1359.71C322.12,-1296.25 406.21,-1219.63 464.34,-1166.67"/>
-<text xml:space="preserve" text-anchor="middle" x="335.28" y="-1313.51" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#5a6472">company</text>
+<path fill="none" stroke="#7a8494" d="M252.48,-1355.41C322.12,-1289.55 406.21,-1210.04 464.34,-1155.08"/>
+<text xml:space="preserve" text-anchor="middle" x="335.28" y="-1307.35" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#5a6472">company</text>
 </g>
 <!-- company_follows -->
 <g id="node4" class="node">
@@ -419,9 +423,9 @@
 <!-- users&#45;&gt;company_reviews -->
 <g id="edge7" class="edge">
 <title>users&#45;&gt;company_reviews</title>
-<path fill="none" stroke="#7a8494" d="M245.55,-1034.6C287.11,-955.06 343,-882.12 418.02,-833.8 536,-757.81 706.26,-788.5 809.28,-818.55"/>
-<polygon fill="#7a8494" stroke="#7a8494" points="809.13,-818.5 817.44,-825.67 814.25,-820.02 818.4,-821.26 818.4,-821.26 818.4,-821.26 814.25,-820.02 820,-817.04 809.13,-818.5"/>
-<text xml:space="preserve" text-anchor="middle" x="535.43" y="-836.8" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#5a6472">companyReviews</text>
+<path fill="none" stroke="#7a8494" d="M233.13,-1034.85C275.65,-944.86 335.07,-861.13 418.02,-806.8 535.82,-729.65 706.13,-772.34 809.22,-810.77"/>
+<polygon fill="#7a8494" stroke="#7a8494" points="809.32,-810.8 817.07,-818.56 814.31,-812.69 818.35,-814.23 818.35,-814.23 818.35,-814.23 814.31,-812.69 820.26,-810.14 809.32,-810.8"/>
+<text xml:space="preserve" text-anchor="middle" x="535.43" y="-809.8" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#5a6472">companyReviews</text>
 </g>
 <!-- skill_assessment_results -->
 <g id="node15" class="node">
@@ -606,23 +610,23 @@
 <!-- companies&#45;&gt;job_postings -->
 <g id="edge11" class="edge">
 <title>companies&#45;&gt;job_postings</title>
-<path fill="none" stroke="#7a8494" d="M606.28,-1152.93C660.78,-1192.05 737.23,-1246.92 798.29,-1290.75"/>
-<polygon fill="#7a8494" stroke="#7a8494" points="798.02,-1290.56 803.52,-1300.04 802.35,-1293.67 805.87,-1296.19 805.87,-1296.19 805.87,-1296.19 802.35,-1293.67 808.77,-1292.73 798.02,-1290.56"/>
-<text xml:space="preserve" text-anchor="middle" x="729.47" y="-1266.73" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#5a6472">jobPostings</text>
+<path fill="none" stroke="#7a8494" d="M606.28,-1141.63C660.78,-1182.86 737.23,-1240.68 798.29,-1286.87"/>
+<polygon fill="#7a8494" stroke="#7a8494" points="798.17,-1286.78 803.44,-1296.4 802.43,-1290 805.88,-1292.61 805.88,-1292.61 805.88,-1292.61 802.43,-1290 808.86,-1289.23 798.17,-1286.78"/>
+<text xml:space="preserve" text-anchor="middle" x="729.47" y="-1261.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#5a6472">jobPostings</text>
 </g>
 <!-- companies&#45;&gt;company_follows -->
 <g id="edge13" class="edge">
 <title>companies&#45;&gt;company_follows</title>
-<path fill="none" stroke="#7a8494" d="M606.6,-1183.98C669.44,-1257.41 753.21,-1357.38 763.1,-1379.8 816.41,-1500.62 747.3,-1555.56 806.1,-1673.8 811.74,-1685.13 819.25,-1695.94 827.57,-1705.94"/>
+<path fill="none" stroke="#7a8494" d="M606.58,-1174.22C669.42,-1251.47 753.19,-1356.57 763.1,-1379.8 814.96,-1501.25 747.3,-1555.56 806.1,-1673.8 811.74,-1685.13 819.25,-1695.94 827.57,-1705.94"/>
 <polygon fill="#7a8494" stroke="#7a8494" points="827.6,-1705.98 830.78,-1716.48 831.11,-1710.01 833.95,-1713.27 833.95,-1713.27 833.95,-1713.27 831.11,-1710.01 837.56,-1710.57 827.6,-1705.98"/>
 <text xml:space="preserve" text-anchor="middle" x="729.47" y="-1382.8" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#5a6472">followers</text>
 </g>
 <!-- companies&#45;&gt;company_reviews -->
 <g id="edge12" class="edge">
 <title>companies&#45;&gt;company_reviews</title>
-<path fill="none" stroke="#7a8494" d="M606.28,-1054.02C664.52,-1013.34 747.82,-955.16 810.62,-911.3"/>
-<polygon fill="#7a8494" stroke="#7a8494" points="810.48,-911.4 821.26,-909.36 814.86,-908.34 818.41,-905.86 818.41,-905.86 818.41,-905.86 814.86,-908.34 816.1,-901.98 810.48,-911.4"/>
-<text xml:space="preserve" text-anchor="middle" x="729.47" y="-994.45" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#5a6472">reviews</text>
+<path fill="none" stroke="#7a8494" d="M606.28,-1042.72C664.52,-1004.29 747.82,-949.33 810.62,-907.89"/>
+<polygon fill="#7a8494" stroke="#7a8494" points="810.33,-908.09 821.15,-906.34 814.78,-905.15 818.4,-902.77 818.4,-902.77 818.4,-902.77 814.78,-905.15 816.2,-898.83 810.33,-908.09"/>
+<text xml:space="preserve" text-anchor="middle" x="729.47" y="-986.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#5a6472">reviews</text>
 </g>
 <!-- job_postings&#45;&gt;job_applications -->
 <g id="edge15" class="edge">

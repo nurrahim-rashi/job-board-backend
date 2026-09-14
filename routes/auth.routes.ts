@@ -13,6 +13,8 @@ import {
   subscriptionStatusController,
   updateProfileController,
   uploadAvatarController,
+  uploadCompanyMediaController,
+  removeCompanyMediaController,
   verifyEmailController,
 } from "../controllers/auth.controller.js";
 import { verifyToken } from "../middlewares/auth.middleware.js";
@@ -43,5 +45,7 @@ authRoutes.get("/homepage", authenticated, homepageController);
 authRoutes.get("/subscription-status", authenticated, subscriptionStatusController);
 authRoutes.patch("/profile", authenticated, validate(updateProfileSchema), updateProfileController);
 authRoutes.put("/avatar", authenticated, express.raw({ type: ["image/jpeg", "image/png"], limit: "1mb" }), uploadAvatarController);
+authRoutes.put("/company-media/:field", authenticated, express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: "3mb" }), uploadCompanyMediaController);
+authRoutes.delete("/company-media/:field", authenticated, removeCompanyMediaController);
 authRoutes.post("/change-password", authenticated, validate(changePasswordSchema), changePasswordController);
 authRoutes.post("/logout", authenticated, logoutController);

@@ -1,4 +1,4 @@
-import type { JobPosting } from "../../generated/prisma/client.js";
+import { Prisma, type JobPosting } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/api-error.js";
 import { calculateAge, resolveCvPath } from "../../utils/applicant.util.js";
@@ -36,11 +36,21 @@ export const getApplicantDetailService = async (
   }
 
   const { user, ...rest } = application;
+  let expectedSalaryRequestedAt: Date | null = null;
+  try {
+    const [salaryRequest] = await prisma.$queryRaw<Array<{ expectedSalaryRequestedAt: Date | null }>>(Prisma.sql`
+      SELECT "expectedSalaryRequestedAt" FROM "job_applications" WHERE "id" = ${applicationId}
+    `);
+    expectedSalaryRequestedAt = salaryRequest?.expectedSalaryRequestedAt ?? null;
+  } catch {
+    // Keep applicant details usable while the additive nudge migration is pending.
+  }
 
   return {
     id: rest.id,
     status: rest.status,
     expectedSalary: rest.expectedSalary,
+    expectedSalaryRequestedAt,
     rejectionReason: rest.rejectionReason,
     appliedAt: rest.createdAt,
     cvFile: rest.cvFile,
@@ -52,6 +62,20 @@ export const getApplicantDetailService = async (
     testResult: rest.testResult,
     interview: rest.interview,
   };
+};
+
+export const requestExpectedSalaryService = async (job: JobPosting, applicationId: number) => {
+  const updated = await prisma.$queryRaw<Array<{ id: number; expectedSalaryRequestedAt: Date }>>(Prisma.sql`
+    UPDATE "job_applications"
+    SET "expectedSalaryRequestedAt" = NOW(), "updatedAt" = NOW()
+    WHERE "id" = ${applicationId}
+      AND "jobId" = ${job.id}
+      AND "status" <> 'DRAFT'::"ApplicationStatus"
+      AND "expectedSalary" IS NULL
+    RETURNING "id", "expectedSalaryRequestedAt"
+  `);
+  if (!updated.length) throw new ApiError("Expected salary is already provided or applicant was not found", 400);
+  return updated[0];
 };
 
 export const getApplicantCvService = async (
