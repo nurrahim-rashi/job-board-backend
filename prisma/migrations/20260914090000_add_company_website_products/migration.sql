@@ -1,0 +1,3 @@
+ALTER TABLE "companies"
+ADD COLUMN "website" TEXT NOT NULL DEFAULT '',
+ADD COLUMN "products" JSONB;

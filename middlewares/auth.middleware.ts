@@ -58,3 +58,20 @@ export const verifyRole = (...allowedRoles: UserRole[]) => {
         next();
     };
 };
+
+export const optionalToken = (secretKey: string) => {
+    return (req: Request, _res: Response, next: NextFunction) => {
+        const authHeader = req.headers.authorization;
+        if (!authHeader?.startsWith("Bearer ")) return next();
+        try {
+            const decoded = jwt.verify(authHeader.split(" ")[1], secretKey) as {
+                id: number;
+                role: UserRole;
+            };
+            (req as AuthenticatedRequest).user = decoded;
+        } catch {
+            // Invalid optional tokens are treated as public requests.
+        }
+        next();
+    };
+};

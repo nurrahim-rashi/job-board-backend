@@ -9,6 +9,7 @@ import {
   getAuthenticatedUser,
   getSubscriptionStatus,
   loginUser,
+  loginWithGoogle,
   registerUser,
   requestPasswordReset,
   resendVerificationEmail,
@@ -28,6 +29,11 @@ export async function registerController(req: Request, res: Response) {
 export async function loginController(req: Request, res: Response) {
   const session = await loginUser(req.body);
   return res.status(200).json({ message: "Signed in successfully", data: session });
+}
+
+export async function googleLoginController(req: Request, res: Response) {
+  const session = await loginWithGoogle(req.body.credential);
+  return res.status(200).json({ message: "Signed in with Google", data: session });
 }
 
 export async function meController(req: Request, res: Response) {
