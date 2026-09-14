@@ -4,6 +4,7 @@ import {
   getApplicantDetailController,
   getApplicantListController,
   updateApplicantStatusController,
+  requestExpectedSalaryController,
 } from "../controllers/applicant.controller.js";
 import { verifyRole, verifyToken } from "../middlewares/auth.middleware.js";
 import { jobOwnership } from "../middlewares/job-ownership.middleware.js";
@@ -41,4 +42,10 @@ applicantRoutes.patch(
   ...verifyJobOwner,
   validate(updateStatusSchema),
   updateApplicantStatusController,
+);
+
+applicantRoutes.patch(
+  "/:slug/applicants/:applicationId/request-expected-salary",
+  ...verifyJobOwner,
+  requestExpectedSalaryController,
 );

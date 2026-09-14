@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import { createApplicationController, getMyApplicationDetailController, getMyJobApplicationController, listMyApplicationsController } from "../controllers/application.controller.js";
+import { createApplicationController, getMyApplicationDetailController, getMyJobApplicationController, listMyApplicationsController, submitExpectedSalaryController } from "../controllers/application.controller.js";
 import { verifyRole, verifyToken } from "../middlewares/auth.middleware.js";
 
 export const applicationRoutes = express.Router();
@@ -11,3 +11,4 @@ applicationRoutes.post("/jobs/:slug/applications", ...applicant, upload.single("
 applicationRoutes.get("/jobs/:slug/application", ...applicant, getMyJobApplicationController);
 applicationRoutes.get("/applications/me", ...applicant, listMyApplicationsController);
 applicationRoutes.get("/applications/me/:applicationId", ...applicant, getMyApplicationDetailController);
+applicationRoutes.patch("/applications/me/:applicationId/expected-salary", ...applicant, submitExpectedSalaryController);

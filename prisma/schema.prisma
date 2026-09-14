@@ -135,6 +135,7 @@ model Company {
   values         String[] @default([])
   perks          String[] @default([])
   logo           String?
+  banner         String?
   city           String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -200,6 +201,7 @@ model JobApplication {
   userId          Int
   cvFile          String
   expectedSalary  Int?
+  expectedSalaryRequestedAt DateTime?
   status          ApplicationStatus @default(PENDING)
   rejectionReason String?           @db.Text
   createdAt       DateTime          @default(now())

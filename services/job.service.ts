@@ -1,6 +1,7 @@
 import { JobCategory, Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../utils/api-error.js";
+import { backfillActiveJobCoordinates } from "./geocoding.service.js";
 
 export type JobListOptions = { latitude?: number; longitude?: number; city?: string; title?: string; category?: JobCategory; dateFrom?: Date; dateTo?: Date; sort?: "newest" | "oldest" | "nearest"; limit: number };
 
@@ -13,9 +14,10 @@ function distanceInKilometers(latitude: number, longitude: number, jobLatitude: 
 }
 
 function publicWhere(options: JobListOptions): Prisma.JobPostingWhereInput {
+  const city = options.city?.replace(/^(Kota Administrasi|Kabupaten|Kota)\s+/i, "");
   return {
     isPublished: true, deletedAt: null, deadline: { gte: new Date() },
-    ...(options.city ? { cityLocation: { equals: options.city, mode: "insensitive" } } : {}),
+    ...(city ? { cityLocation: { contains: city, mode: "insensitive" } } : {}),
     ...(options.title ? { OR: [{ title: { contains: options.title, mode: "insensitive" } }, { company: { companyName: { contains: options.title, mode: "insensitive" } } }] } : {}),
     ...(options.category ? { category: options.category } : {}),
     ...(options.dateFrom || options.dateTo ? { createdAt: { ...(options.dateFrom ? { gte: options.dateFrom } : {}), ...(options.dateTo ? { lte: options.dateTo } : {}) } } : {}),
@@ -23,19 +25,26 @@ function publicWhere(options: JobListOptions): Prisma.JobPostingWhereInput {
 }
 
 export async function getPublicJobs(options: JobListOptions) {
+  if (options.latitude !== undefined && options.longitude !== undefined) {
+    await backfillActiveJobCoordinates();
+  }
   const jobs = await prisma.jobPosting.findMany({ where: publicWhere(options), select: jobSelect, orderBy: { createdAt: options.sort === "oldest" ? "asc" : "desc" } });
   if (options.latitude === undefined || options.longitude === undefined) return jobs.slice(0, options.limit);
   const nearbyJobs = jobs.map((job) => {
     const latitude = Number(job.latitude); const longitude = Number(job.longitude);
-    const distance = Number.isFinite(latitude) && Number.isFinite(longitude) ? distanceInKilometers(options.latitude!, options.longitude!, latitude, longitude) : null;
+    const distance = job.latitude !== null && job.longitude !== null && Number.isFinite(latitude) && Number.isFinite(longitude) ? distanceInKilometers(options.latitude!, options.longitude!, latitude, longitude) : null;
     return { ...job, distance };
   }).filter((job) => job.distance !== null && job.distance <= 50);
+  if (nearbyJobs.length === 0) {
+    return jobs.map((job) => ({ ...job, distance: null })).slice(0, options.limit);
+  }
   return (options.sort === "nearest" ? nearbyJobs.sort((first, second) => first.distance! - second.distance! || second.createdAt.getTime() - first.createdAt.getTime()) : nearbyJobs).slice(0, options.limit);
 }
 
 export async function getPublicJobDetail(slug: string) {
-  const job = await prisma.jobPosting.findFirst({ where: { slug, isPublished: true, deletedAt: null, deadline: { gte: new Date() } }, include: { company: { select: { id: true, companyName: true, city: true, logo: true, profileContent: true, createdAt: true } }, _count: { select: { applications: true } } } });
+  const job = await prisma.jobPosting.findFirst({ where: { slug, isPublished: true, deletedAt: null, deadline: { gte: new Date() } }, include: { company: { select: { id: true, companyName: true, city: true, logo: true, profileContent: true, createdAt: true, user: { select: { id: true, name: true } } } }, _count: { select: { applications: true } } } });
   if (!job) throw new ApiError("Job not found", 404);
   const relatedJobs = await prisma.jobPosting.findMany({ where: { companyId: job.companyId, id: { not: job.id }, isPublished: true, deletedAt: null, deadline: { gte: new Date() } }, select: jobSelect, take: 3, orderBy: { createdAt: "desc" } });
-  return { ...job, applicantCount: job._count.applications, relatedJobs };
+  const { user, ...company } = job.company;
+  return { ...job, company: { ...company, postedBy: { id: user.id, name: user.name || company.companyName } }, applicantCount: job._count.applications, relatedJobs };
 }

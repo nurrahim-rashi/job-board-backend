@@ -1,6 +1,7 @@
 import { JobPosting } from "../../generated/prisma/client.js";
 import { uploadImage } from "../../lib/cloudinary.js";
 import { prisma } from "../../lib/prisma.js";
+import { geocodeIndonesianLocation } from "../geocoding.service.js";
 import { ApiError } from "../../utils/api-error.js";
 import { slugify } from "../../utils/slug.js";
 import {
@@ -27,11 +28,13 @@ export const createJobService = async (
   const slug = slugify(input.title) + "-" + randomSuffix();
 
   const bannerUrl = banner ? (await uploadImage(banner)).secure_url : undefined;
+  const coordinates = await geocodeIndonesianLocation(input.cityLocation);
 
   return prisma.jobPosting.create({
     data: {
       ...input,
       banner: bannerUrl,
+      ...coordinates,
       companyId: company.id,
       slug,
     },
@@ -75,10 +78,23 @@ export const updateJobService = async (
   }
 
   const bannerUrl = banner ? (await uploadImage(banner)).secure_url : undefined;
+  const locationChanged = input.cityLocation !== undefined && input.cityLocation !== job.cityLocation;
+  const coordinates = locationChanged
+    ? await geocodeIndonesianLocation(input.cityLocation!)
+    : undefined;
 
   return prisma.jobPosting.update({
     where: { id: job.id },
-    data: { ...input, ...(bannerUrl && { banner: bannerUrl }) },
+    data: {
+      ...input,
+      ...(locationChanged
+        ? {
+            latitude: coordinates?.latitude ?? null,
+            longitude: coordinates?.longitude ?? null,
+          }
+        : {}),
+      ...(bannerUrl && { banner: bannerUrl }),
+    },
   });
 };
 
@@ -119,4 +135,3 @@ export const getCompanyId = async (userId: number) => {
 
     return company.id;
 }
-

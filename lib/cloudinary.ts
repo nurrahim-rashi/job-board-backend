@@ -3,6 +3,9 @@ import crypto from "crypto";
 import FormData from "form-data";
 import multer from "multer";
 import { ApiError } from "../utils/api-error.js";
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { extname, join } from "node:path";
 
 const cloudName = process.env.CLOUDINARY_CLOUD_NAME!;
 const apiKey = process.env.CLOUDINARY_API_KEY!;
@@ -27,6 +30,15 @@ const generateSignature = (params: Record<string, string | number>): string => {
  * Upload image using SIGNED request
  */
 export const uploadImage = async (file: Express.Multer.File) => {
+  if (!cloudName || !apiKey || !apiSecret) {
+    const extension = extname(file.originalname).toLowerCase() ||
+      (file.mimetype === "image/png" ? ".png" : ".jpg");
+    const uploadPath = join(process.cwd(), "uploads", "job-banners");
+    const fileName = `${randomUUID()}${extension}`;
+    await mkdir(uploadPath, { recursive: true });
+    await writeFile(join(uploadPath, fileName), file.buffer);
+    return { secure_url: `/uploads/job-banners/${fileName}` };
+  }
   const timestamp = Math.floor(Date.now() / 1000);
 
   const signature = generateSignature({
