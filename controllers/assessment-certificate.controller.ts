@@ -14,7 +14,7 @@ export const downloadAssessmentCertificateController = async (
     resultId,
   );
 
-  const doc = generateCertificatePdfService(certificate);
+  const doc = await generateCertificatePdfService(certificate);
 
   const filename = `certificate-${certificate.certificateCode}.pdf`;
 
