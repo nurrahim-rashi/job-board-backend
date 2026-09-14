@@ -1,4 +1,6 @@
 import { Response, Request } from "express";
+import { parseParams } from "../middlewares/validation.middleware.js";
+import { certificateVerificationParamsSchema } from "../validators/assessment.validator.js";
 import {
   createAssessmentService,
   createAssessmentQuestionService,
@@ -14,6 +16,7 @@ import {
   getUserAssessmentResultDetailService,
   generateAssessmentCertificateService,
   getDeveloperAssessmentsService,
+  verifyAssessmentCertificateService,
 } from "../services/assessment.service.js";
 
 export const createAssessmentController = async (
@@ -225,6 +228,23 @@ export const generateAssessmentCertificateController = async (
 
   return res.status(200).json({
     message: "Assessment certificate generated successfully",
+    data: certificate,
+  });
+};
+
+export const verifyAssessmentCertificateController = async (
+  req: Request,
+  res: Response,
+) => {
+  const { certificateCode } = parseParams(
+    certificateVerificationParamsSchema,
+    req.params,
+  );
+
+  const certificate = await verifyAssessmentCertificateService(certificateCode);
+
+  return res.status(200).json({
+    message: "Certificate verified successfully",
     data: certificate,
   });
 };

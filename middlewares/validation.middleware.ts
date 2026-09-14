@@ -22,10 +22,21 @@ export const validate = (schema: ZodType) => {
   };
 };
 
-
 export const parseQuery = <T>(schema: ZodType<T>, query: unknown): T => {
   try {
     return schema.parse(query);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new ApiError(describe(error), 400);
+    }
+
+    throw error;
+  }
+};
+
+export const parseParams = <T>(schema: ZodType<T>, params: unknown): T => {
+  try {
+    return schema.parse(params);
   } catch (error) {
     if (error instanceof ZodError) {
       throw new ApiError(describe(error), 400);

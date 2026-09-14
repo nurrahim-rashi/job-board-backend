@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import app from "../app.js";
 import { prisma } from "../lib/prisma.js";
 import type { Response } from "supertest";
+import { randomUUID } from "node:crypto";
 
 const createDeveloper = async () => {
   return prisma.user.create({
@@ -2392,6 +2393,94 @@ describe("POST /assessment", () => {
     );
 
     expect(response.status).toBe(401);
+  });
+
+  it("Should publicly verify a valid assessment certificate", async () => {
+    const user = await createJobSeeker();
+    testUserId = user.id;
+
+    const assessment = await createTestAssessment();
+
+    const certificateCode = `CERT-${randomUUID()}`;
+    const completedAt = new Date();
+
+    await prisma.skillAssessmentResult.create({
+      data: {
+        userId: user.id,
+        assessmentId: assessment.id,
+        score: 92,
+        isPassed: true,
+        startedAt: new Date(),
+        completedAt,
+        certificateCode,
+        badgeName: `${assessment.skillName} Skill Badge`,
+      },
+    });
+
+    const response = await request(app).get(
+      `/assessment/certificates/verify/${certificateCode}`,
+    );
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.message).toBe("Certificate verified successfully");
+
+    expect(response.body.data).toMatchObject({
+      valid: true,
+      certificateCode,
+      recipientName: user.name,
+      assessmentTitle: assessment.title,
+      skillName: assessment.skillName,
+      score: 92,
+    });
+
+    expect(response.body.data.issuedAt).toBe(completedAt.toISOString());
+  });
+
+  it("Should return 404 for an unknown certificate code", async () => {
+    const response = await request(app).get(
+      `/assessment/certificates/verify/CERT-${randomUUID()}`,
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.body.message).toBe("Certificate not found");
+  });
+
+  it("Should reject an invalid certificate code format", async () => {
+    const response = await request(app).get(
+      "/assessment/certificates/verify/INVALID-CODE",
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toContain("Invalid certificate code format");
+  });
+
+  it("Should reject verification when the certificate belongs to a failed result", async () => {
+    const user = await createJobSeeker();
+    testUserId = user.id;
+
+    const assessment = await createTestAssessment();
+
+    const certificateCode = `CERT-${randomUUID()}`;
+
+    await prisma.skillAssessmentResult.create({
+      data: {
+        userId: user.id,
+        assessmentId: assessment.id,
+        score: 60,
+        isPassed: false,
+        startedAt: new Date(),
+        completedAt: new Date(),
+        certificateCode,
+      },
+    });
+
+    const response = await request(app).get(
+      `/assessment/certificates/verify/${certificateCode}`,
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.body.message).toBe("Certificate not found");
   });
 
   it("Should download certificate PDF for passed assessment result", async () => {

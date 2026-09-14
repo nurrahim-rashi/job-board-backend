@@ -98,3 +98,17 @@ export const submitAssessmentSchema = z.object({
 });
 
 export type SubmitAssessmentSchema = z.infer<typeof submitAssessmentSchema>;
+
+export const certificateVerificationParamsSchema = z.object({
+  certificateCode: z
+    .string({
+      message: "Certificate code is required",
+    })
+    .trim()
+    .min(1, "Certificate code is required")
+    .startsWith("CERT-", "Invalid certificate code format"),
+});
+
+export type CertificateVerificationParamsSchema = z.infer<
+  typeof certificateVerificationParamsSchema
+>;
