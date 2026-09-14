@@ -23,10 +23,13 @@ import {
   generateAssessmentCertificateController,
   getDeveloperAssessmentsController,
   verifyAssessmentCertificateController,
+  getPublicSkillNamesController,
 } from "../controllers/assessment.controller.js";
 import { downloadAssessmentCertificateController } from "../controllers/assessment-certificate.controller.js";
 
 export const assessmentRoutes = express.Router();
+
+assessmentRoutes.get("/skills", getPublicSkillNamesController);
 
 assessmentRoutes.post(
   "/",

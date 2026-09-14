@@ -18,6 +18,7 @@ import { reviewRoutes } from "./routes/review.routes.js";
 import { cvRoutes } from "./routes/cv.routes.js";
 import { profileRoutes } from "./routes/profile.routes.js";
 import { subscriptionRoutes } from "./routes/subscription.routes.js";
+import { regionRoutes } from "./routes/region.routes.js";
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use("/job-posting", interviewRoutes);
 app.use("/job-posting", jobPostingRoutes);
 app.use("/companies", companyRoutes);
 app.use("/profiles", profileRoutes);
+app.use("/regions", regionRoutes);
 app.use("/", applicationRoutes);
 
 // errors

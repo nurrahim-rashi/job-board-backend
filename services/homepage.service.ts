@@ -97,6 +97,7 @@ export async function getHomepageData(userId: number) {
           title: true,
           cityLocation: true,
           category: true,
+          createdAt: true,
           company: { select: { companyName: true } },
         },
       }),

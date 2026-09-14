@@ -16,6 +16,7 @@ import {
   resetPassword,
   updateProfile,
   updateAvatar,
+  updateCompanyMedia,
   verifyEmail,
 } from "../services/auth.service.js";
 
@@ -93,6 +94,32 @@ export async function uploadAvatarController(req: Request, res: Response) {
   await writeFile(join(uploadPath, fileName), req.body);
   const user = await updateAvatar(userId(req), `/uploads/avatars/${fileName}`);
   return res.status(200).json({ message: "Avatar uploaded successfully", data: user });
+}
+
+export async function uploadCompanyMediaController(req: Request, res: Response) {
+  const field = req.params.field;
+  if (field !== "logo" && field !== "banner") {
+    return res.status(400).json({ message: "Company media type is invalid" });
+  }
+  const contentType = req.headers["content-type"]?.split(";")[0];
+  const extensions: Record<string, string> = { "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp" };
+  if (!contentType || !extensions[contentType] || !Buffer.isBuffer(req.body)) {
+    return res.status(400).json({ message: "Image must be a JPG, PNG, or WEBP file" });
+  }
+  if (req.body.length > 3 * 1024 * 1024) return res.status(400).json({ message: "Image must be 3MB or smaller" });
+  const uploadPath = join(process.cwd(), "uploads", "companies");
+  const fileName = `${randomUUID()}${extensions[contentType]}`;
+  await mkdir(uploadPath, { recursive: true });
+  await writeFile(join(uploadPath, fileName), req.body);
+  const user = await updateCompanyMedia(userId(req), field, `/uploads/companies/${fileName}`);
+  return res.status(200).json({ message: `Company ${field} uploaded`, data: user });
+}
+
+export async function removeCompanyMediaController(req: Request, res: Response) {
+  const field = req.params.field;
+  if (field !== "logo" && field !== "banner") return res.status(400).json({ message: "Company media type is invalid" });
+  const user = await updateCompanyMedia(userId(req), field, null);
+  return res.status(200).json({ message: `Company ${field} removed`, data: user });
 }
 
 export function logoutController(_req: Request, res: Response) {

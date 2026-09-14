@@ -17,7 +17,11 @@ import {
   generateAssessmentCertificateService,
   getDeveloperAssessmentsService,
   verifyAssessmentCertificateService,
+  getPublicSkillNamesService,
 } from "../services/assessment.service.js";
+
+export const getPublicSkillNamesController = async (_req: Request, res: Response) =>
+  res.status(200).json({ data: await getPublicSkillNamesService() });
 
 export const createAssessmentController = async (
   req: Request,

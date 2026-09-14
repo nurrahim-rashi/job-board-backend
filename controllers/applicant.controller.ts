@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import {
   getApplicantCvService,
   getApplicantDetailService,
+  requestExpectedSalaryService,
 } from "../services/applicant-management/applicant-detail.service.js";
 import { getApplicantListService } from "../services/applicant-management/applicant-list.service.js";
 import { updateApplicantStatusService } from "../services/applicant-management/applicant-status.service.js";
@@ -19,6 +20,14 @@ const getApplicationId = (value: unknown) => {
   }
 
   return applicationId;
+};
+
+export const requestExpectedSalaryController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const applicationId = getApplicationId(req.params.applicationId);
+    const data = await requestExpectedSalaryService(req.job!, applicationId);
+    res.status(200).json({ message: "Expected salary request sent to applicant", data });
+  } catch (error) { next(error); }
 };
 
 export const getApplicantListController = async (
