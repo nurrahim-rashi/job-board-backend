@@ -101,6 +101,7 @@ model User {
   profileLinks               Json?
   experiences                Json?
   selectedWork               Json?
+  isPublicProfile            Boolean      @default(true)
   emailVerifiedAt            DateTime?
   emailVerificationTokenHash String?
   emailVerificationExpiresAt DateTime?
@@ -129,6 +130,8 @@ model Company {
   tagline        String   @default("")
   size           String   @default("")
   founded        Int?
+  website        String   @default("")
+  products       Json?
   values         String[] @default([])
   perks          String[] @default([])
   logo           String?

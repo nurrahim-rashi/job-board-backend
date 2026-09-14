@@ -2,6 +2,7 @@ import express from "express";
 import {
   changePasswordController,
   forgotPasswordController,
+  googleLoginController,
   homepageController,
   loginController,
   logoutController,
@@ -19,6 +20,7 @@ import { validate } from "../middlewares/validation.middleware.js";
 import {
   changePasswordSchema,
   emailSchema,
+  googleLoginSchema,
   loginSchema,
   registerSchema,
   resetPasswordSchema,
@@ -31,6 +33,7 @@ const authenticated = verifyToken(process.env.JWT_SECRET!);
 
 authRoutes.post("/register", validate(registerSchema), registerController);
 authRoutes.post("/login", validate(loginSchema), loginController);
+authRoutes.post("/google", validate(googleLoginSchema), googleLoginController);
 authRoutes.post("/verify-email", validate(tokenSchema), verifyEmailController);
 authRoutes.post("/resend-verification", validate(emailSchema), resendVerificationController);
 authRoutes.post("/forgot-password", validate(emailSchema), forgotPasswordController);

@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { OAuth2Client } from "google-auth-library";
 import { AuthProvider, UserRole } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../utils/api-error.js";
@@ -29,11 +30,11 @@ const userSelect = {
   profileIntro: true,
   salaryExpectation: true,
   profileStory: true,
-  lookingFor: true,
   skills: true,
   profileLinks: true,
   experiences: true,
   selectedWork: true,
+  isPublicProfile: true,
   authProvider: true,
   company: {
     select: {
@@ -44,6 +45,8 @@ const userSelect = {
       tagline: true,
       size: true,
       founded: true,
+      website: true,
+      products: true,
       values: true,
       perks: true,
       logo: true,
@@ -137,6 +140,59 @@ export async function loginUser(input: LoginInput) {
     throw new ApiError("Email or password is incorrect", 401);
   }
   return session(await getAuthenticatedUser(user.id));
+}
+
+export async function loginWithGoogle(credential: string) {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) throw new ApiError("Google Sign-In is not configured", 503);
+
+  let ticket;
+  try {
+    ticket = await new OAuth2Client(clientId).verifyIdToken({
+      idToken: credential,
+      audience: clientId,
+    });
+  } catch {
+    throw new ApiError("Google credential is invalid or has expired", 401);
+  }
+  const payload = ticket.getPayload();
+  const email = payload?.email?.trim().toLowerCase();
+
+  if (!email || !payload?.email_verified || !payload.name) {
+    throw new ApiError("Google account could not be verified", 401);
+  }
+
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+  if (existingUser?.authProvider === AuthProvider.EMAIL) {
+    throw new ApiError(
+      "This email uses password login. Sign in with your email and password.",
+      409,
+    );
+  }
+
+  const user = existingUser
+    ? await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          name: payload.name,
+          avatar: existingUser.avatar || payload.picture || null,
+          emailVerifiedAt: existingUser.emailVerifiedAt || new Date(),
+        },
+        select: userSelect,
+      })
+    : await prisma.user.create({
+        data: {
+          name: payload.name,
+          email,
+          avatar: payload.picture || null,
+          role: UserRole.JOB_SEEKER,
+          authProvider: AuthProvider.GOOGLE,
+          emailVerifiedAt: new Date(),
+        },
+        select: userSelect,
+      });
+
+  return session(user);
 }
 
 export async function getAuthenticatedUser(userId: number) {
@@ -245,6 +301,8 @@ export async function updateProfile(userId: number, input: UpdateProfileInput) {
     companyTagline,
     companySize,
     companyFounded,
+    companyWebsite,
+    companyProducts,
     companyValues,
     companyPerks,
     ...userData
@@ -275,6 +333,8 @@ export async function updateProfile(userId: number, input: UpdateProfileInput) {
         companyTagline !== undefined ||
         companySize !== undefined ||
         companyFounded !== undefined ||
+        companyWebsite !== undefined ||
+        companyProducts !== undefined ||
         companyValues !== undefined ||
         companyPerks !== undefined)
     ) {
@@ -288,6 +348,8 @@ export async function updateProfile(userId: number, input: UpdateProfileInput) {
           ...(companyTagline !== undefined ? { tagline: companyTagline } : {}),
           ...(companySize !== undefined ? { size: companySize } : {}),
           ...(companyFounded !== undefined ? { founded: companyFounded } : {}),
+          ...(companyWebsite !== undefined ? { website: companyWebsite } : {}),
+          ...(companyProducts !== undefined ? { products: companyProducts } : {}),
           ...(companyValues !== undefined ? { values: companyValues } : {}),
           ...(companyPerks !== undefined ? { perks: companyPerks } : {}),
         },
