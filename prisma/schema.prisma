@@ -114,7 +114,6 @@ model User {
   jobApplications   JobApplication[]
   subscriptions     UserSubscription[]
   companyReviews    CompanyReview[]
-  companyFollows    CompanyFollow[]
   assessmentResults SkillAssessmentResult[]
   testResults       ApplicantTestResult[]
 
@@ -143,7 +142,6 @@ model Company {
   user        User            @relation(fields: [userId], references: [id])
   jobPostings JobPosting[]
   reviews     CompanyReview[]
-  followers   CompanyFollow[]
 
   @@map("companies")
 }
@@ -180,21 +178,6 @@ model JobPosting {
   @@map("job_postings")
 }
 
-model CompanyFollow {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  companyId Int
-  createdAt DateTime @default(now())
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, companyId])
-  @@index([userId, createdAt])
-  @@index([companyId])
-  @@map("company_follows")
-}
-
 model JobApplication {
   id              Int               @id @default(autoincrement())
   jobId           Int
@@ -202,6 +185,7 @@ model JobApplication {
   cvFile          String
   expectedSalary  Int?
   expectedSalaryRequestedAt DateTime?
+  lastEducationSnapshot String?
   status          ApplicationStatus @default(PENDING)
   rejectionReason String?           @db.Text
   createdAt       DateTime          @default(now())
@@ -282,7 +266,6 @@ model Interview {
   reminderSentAt   DateTime?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
-
   jobApplication JobApplication @relation(fields: [jobApplicationId], references: [id])
 
   @@index([interviewDate, status, reminderSentAt])

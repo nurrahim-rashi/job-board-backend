@@ -3,6 +3,15 @@ import { JobCategory } from "../generated/prisma/enums.js";
 
 const MAX_DATABASE_INTEGER = 2_147_483_647;
 
+const deadlineIsAllowed = (deadline: Date) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const maximum = new Date(today);
+  maximum.setDate(maximum.getDate() + 360);
+  maximum.setHours(23, 59, 59, 999);
+  return deadline >= today && deadline <= maximum;
+};
+
 const jobFields = z.object({
   title: z.string().trim().min(1, "Job title is required"),
   description: z.string().trim().min(1, "description is required"),
@@ -34,7 +43,7 @@ const jobFields = z.object({
   ),
   deadline: z.coerce
     .date()
-    .refine((d) => d > new Date(), "Deadline must be in the future"),
+    .refine(deadlineIsAllowed, "Deadline must be between today and 360 days from today"),
 });
 
 const salaryRangeCheck = (data: { salaryMin?: number; salaryMax?: number }) =>

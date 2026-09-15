@@ -1,5 +1,14 @@
 import z from "zod";
 
+const optionalYearMonth = z.preprocess((value) => {
+  if (value === "" || value === null || value === undefined) return undefined;
+  if (typeof value === "string") {
+    const match = value.trim().match(/^(\d{4})-(\d{2})/);
+    if (match) return `${match[1]}-${match[2]}`;
+  }
+  return value;
+}, z.string().regex(/^\d{4}-\d{2}$/, "Use YYYY-MM format").optional());
+
 const passwordSchema = z
   .string()
   .min(6, "Password must be at least 6 characters")
@@ -84,7 +93,7 @@ export const updateProfileSchema = z.object({
     note: z.string().trim().max(2000),
     url: z.url().or(z.literal("")).optional(),
     company: z.string().trim().max(150).optional(),
-    date: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+    date: optionalYearMonth,
   })).max(20).optional(),
   isPublicProfile: z.boolean().optional(),
   companyName: z.string().trim().min(2).max(150).optional(),

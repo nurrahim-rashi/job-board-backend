@@ -37,11 +37,9 @@ export const getApplicantListService = async (
     }),
     user: {
       ...(name && { name: { contains: name, mode: "insensitive" as const } }),
-      ...(education && {
-        lastEducation: { contains: education, mode: "insensitive" as const },
-      }),
       ...(birthDate && { birthDate }),
     },
+    ...(education && { lastEducationSnapshot: { contains: education, mode: "insensitive" as const } }),
   };
 
   const orderBy: Prisma.JobApplicationOrderByWithRelationInput =
@@ -182,7 +180,7 @@ export const getApplicantListService = async (
         name: application.user.name,
         avatar: application.user.avatar,
         age: calculateAge(application.user.birthDate),
-        lastEducation: application.user.lastEducation,
+        lastEducation: application.lastEducationSnapshot ?? application.user.lastEducation,
       },
       testScore: application.testResult?.score ?? null,
     })),

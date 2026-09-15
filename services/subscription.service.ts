@@ -93,6 +93,9 @@ export const purchaseSubscriptionService = async (
     throw new ApiError("Only job seekers can purchase subscription plans", 403);
   }
 
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { emailVerifiedAt: true } });
+  if (!user?.emailVerifiedAt) throw new ApiError("Verify your email before purchasing a subscription", 403);
+
   const subscription = await prisma.subscription.findUnique({
     where: {
       name: data.plan,
