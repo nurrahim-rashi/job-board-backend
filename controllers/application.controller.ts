@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { createApplication, getMyApplicationDetail, getMyApplicationForJob, getMyApplications, submitRequestedExpectedSalary } from "../services/application.service.js";
+import { createApplication, getMyApplicationDetail, getMyApplicationForJob, getMyApplications, getMyApplicationsPage, submitRequestedExpectedSalary } from "../services/application.service.js";
 import { ApiError } from "../utils/api-error.js";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
 
@@ -15,6 +15,15 @@ export async function createApplicationController(req: Request, res: Response, n
 
 export async function listMyApplicationsController(req: Request, res: Response, next: NextFunction) {
   try { res.status(200).json({ data: await getMyApplications((req as AuthenticatedRequest).user.id) }); } catch (error) { next(error); }
+}
+
+export async function listMyApplicationsPageController(req: Request, res: Response, next: NextFunction) {
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(20, Math.max(1, Number(req.query.limit) || 8));
+    const view = req.query.view === "interviews" || req.query.view === "tests" || req.query.view === "closed" ? req.query.view : undefined;
+    res.status(200).json({ data: await getMyApplicationsPage((req as AuthenticatedRequest).user.id, page, limit, view) });
+  } catch (error) { next(error); }
 }
 
 export async function getMyApplicationDetailController(req: Request, res: Response, next: NextFunction) {

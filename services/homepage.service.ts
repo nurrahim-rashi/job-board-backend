@@ -54,7 +54,7 @@ export async function getHomepageData(userId: number) {
     deadline: { gte: new Date() },
   } as const;
 
-  const [applications, followedCompanies, candidateJobs, newJobs, applicationCount, interviewCount] =
+  const [applications, candidateJobs, newJobs, applicationCount, interviewCount] =
     await Promise.all([
       prisma.jobApplication.findMany({
         where: { userId },
@@ -72,23 +72,11 @@ export async function getHomepageData(userId: number) {
           },
         },
       }),
-      prisma.companyFollow.findMany({
-        where: { userId },
-        take: 4,
-        orderBy: { createdAt: "desc" },
-        select: {
-          company: {
-            select: {
-              id: true,
-              companyName: true,
-              city: true,
-              _count: { select: { jobPostings: { where: activeJobWhere } } },
-            },
-          },
-        },
-      }),
       prisma.jobPosting.findMany({
-        where: activeJobWhere,
+        where: {
+          ...activeJobWhere,
+          applications: { none: { userId } },
+        },
         take: 12,
         orderBy: { createdAt: "desc" },
         select: {
@@ -141,9 +129,5 @@ export async function getHomepageData(userId: number) {
     profileCompletion,
     applications,
     recommendations,
-    followedCompanies: followedCompanies.map(({ company }) => ({
-      ...company,
-      openJobs: company._count.jobPostings,
-    })),
   };
 }

@@ -59,7 +59,6 @@ const getCompany = async (job: JobPosting) => {
 
   return company;
 };
-
 const buildContext = (
   job: JobPosting,
   company: { companyName: string; user: { email: string } },

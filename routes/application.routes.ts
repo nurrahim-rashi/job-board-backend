@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import { createApplicationController, getMyApplicationDetailController, getMyJobApplicationController, listMyApplicationsController, submitExpectedSalaryController } from "../controllers/application.controller.js";
+import { createApplicationController, getMyApplicationDetailController, getMyJobApplicationController, listMyApplicationsController, listMyApplicationsPageController, submitExpectedSalaryController } from "../controllers/application.controller.js";
 import { verifyRole, verifyToken } from "../middlewares/auth.middleware.js";
 
 export const applicationRoutes = express.Router();
@@ -10,5 +10,6 @@ const applicant = [verifyToken(process.env.JWT_SECRET!), verifyRole("JOB_SEEKER"
 applicationRoutes.post("/jobs/:slug/applications", ...applicant, upload.single("cv"), createApplicationController);
 applicationRoutes.get("/jobs/:slug/application", ...applicant, getMyJobApplicationController);
 applicationRoutes.get("/applications/me", ...applicant, listMyApplicationsController);
+applicationRoutes.get("/applications/me/page", ...applicant, listMyApplicationsPageController);
 applicationRoutes.get("/applications/me/:applicationId", ...applicant, getMyApplicationDetailController);
 applicationRoutes.patch("/applications/me/:applicationId/expected-salary", ...applicant, submitExpectedSalaryController);

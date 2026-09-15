@@ -34,7 +34,6 @@ export function readInterviewProposal(notes: string | null): {
     return { notes, proposal: { proposedDate: null, proposalNote: null, alternativeSlots: [] } };
   }
 }
-
 export function writeInterviewProposal(
   notes: string | null,
   proposedDate: Date,

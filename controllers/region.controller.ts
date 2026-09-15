@@ -1,9 +1,13 @@
 import type { Request, Response } from "express";
-import { getRegions } from "../services/region.service.js";
+import { getCountries, getRegions } from "../services/region.service.js";
 import { ApiError } from "../utils/api-error.js";
 
 export async function listProvincesController(_req: Request, res: Response) {
   res.status(200).json({ data: await getRegions("provinces.json") });
+}
+
+export async function listCountriesController(_req: Request, res: Response) {
+  res.status(200).json({ data: await getCountries() });
 }
 
 export async function listRegenciesController(req: Request, res: Response) {

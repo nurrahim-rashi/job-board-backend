@@ -2,6 +2,7 @@ import { Prisma, type JobPosting } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/api-error.js";
 import { calculateAge, resolveCvPath } from "../../utils/applicant.util.js";
+import { readInterviewProposal } from "../../utils/interview-proposal.util.js";
 
 export const getApplicantDetailService = async (
   job: JobPosting,
@@ -45,6 +46,7 @@ export const getApplicantDetailService = async (
   } catch {
     // Keep applicant details usable while the additive nudge migration is pending.
   }
+  const parsedInterview = rest.interview ? readInterviewProposal(rest.interview.notes) : null;
 
   return {
     id: rest.id,
@@ -57,10 +59,11 @@ export const getApplicantDetailService = async (
     cvPreviewUrl: `/job-posting/${job.slug}/applicants/${rest.id}/cv`,
     applicant: {
       ...user,
+      lastEducation: rest.lastEducationSnapshot ?? user.lastEducation,
       age: calculateAge(user.birthDate),
     },
     testResult: rest.testResult,
-    interview: rest.interview,
+    interview: rest.interview ? { ...rest.interview, notes: parsedInterview?.notes, ...parsedInterview?.proposal } : null,
   };
 };
 
