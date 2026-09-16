@@ -1,22 +1,35 @@
-import { Response } from "express";
-import { createReviewService } from "../services/review.service.js";
-import { createReviewSchema } from "../validators/review.validator.js";
+import { Response, Request } from "express";
+import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
+import {
+  createReviewService,
+  getCompanyReviewsService,
+} from "../services/review.service.js";
+import { parsePositiveIntId } from "../utils/parse-id.js";
 
-export const createReviewController = async (
-    req: any,
-    res: Response,
+function getCompanyId(req: Request) {
+  return parsePositiveIntId(String(req.params.companyId), "Company id");
+}
+
+export const getCompanyReviewsController = async (
+  req: Request,
+  res: Response,
 ) => {
-    const userId = req.user.id;
-    const companyId = Number(req.params.companyId);
+  const companyId = getCompanyId(req);
+  const user = (req as AuthenticatedRequest).user;
 
-    const review = await createReviewService(
-        userId,
-        companyId,
-        req.body,
-    );
+  return res.status(200).json({
+    data: await getCompanyReviewsService(companyId, user?.id),
+  });
+};
 
-    return res.status(201).json({
-        message: "Company review created successfully",
-        data: review,
-    });
+export const createReviewController = async (req: Request, res: Response) => {
+  const companyId = getCompanyId(req);
+  const user = (req as AuthenticatedRequest).user;
+
+  const review = await createReviewService(user.id, companyId, req.body);
+
+  return res.status(201).json({
+    message: "Company review created successfully",
+    data: review,
+  });
 };
