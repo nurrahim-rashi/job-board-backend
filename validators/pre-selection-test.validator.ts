@@ -23,6 +23,11 @@ export const saveTestSchema = z.object({
     .array(questionSchema)
     .min(1, "At least one question is required")
     .max(25, "Maximum 25 questions"),
+  testDurationMinutes: z
+    .number()
+    .int()
+    .positive("Minimum test duration is 1 minute")
+    .optional(),
 });
 
 export const activationSchema = z.object({

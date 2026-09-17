@@ -50,8 +50,19 @@ export const saveQuestionsService = async (jobId: number, input: SaveTestInput) 
         correctAnswer: q.correctAnswer,
       })),
     }),
+    ...(input.testDurationMinutes
+      ? [
+          prisma.jobPosting.update({
+            where: { id: jobId },
+            data: { testDurationMinutes: input.testDurationMinutes },
+          }),
+        ]
+      : []),
   ]);
-  return { totalQuestions: input.questions.length };
+  return {
+    totalQuestions: input.questions.length,
+    testDurationMinutes: input.testDurationMinutes,
+  };
 };
 
 export const setActivationService = async (
