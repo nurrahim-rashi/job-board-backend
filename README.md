@@ -1,142 +1,199 @@
 # Polaris API
 
-Polaris is a location-aware job board that connects job seekers with thoughtful companies. It supports job discovery, applications, pre-selection tests, interviews, subscriptions, company reviews, and skill assessments in one platform.
+Polaris API powers authentication, profiles, worldwide job discovery, applications, hiring workflows, quality scores, subscriptions, company reviews, CV generation, and skill assessments for the Polaris platform.
 
-## Technology
+## Stack
 
-- Node.js, Express, and TypeScript
-- PostgreSQL with Prisma ORM
-- JWT, Node.js `scrypt`, and Zod validation
-- Resend API for transactional email delivery
-- Vitest and Supertest for integration tests
+- Node.js, Express 5, and TypeScript
+- PostgreSQL with Prisma 7
+- JWT authentication and role-based middleware
+- Zod request validation
+- Google Auth Library for Google ID-token verification
+- Resend for transactional email
+- Midtrans Snap for subscription payments
+- Cloudinary for optional hosted job-banner uploads
+- Vitest and Supertest
 
-## Getting Started
+## Requirements
+
+- Node.js 20 or newer
+- npm
+- PostgreSQL
+
+## Local Setup
 
 ```bash
 cp .env.example .env
 npm install
 npx prisma migrate dev
 npx prisma generate
+npx tsx scripts/seed-subscriptions.ts
 npm run dev
 ```
 
-The API runs on `http://localhost:8000` by default.
+The API listens on `http://localhost:8000` unless `PORT` is changed. The subscription seed is required for Polaris Plus and Polaris Pro to appear on the pricing page.
+
+When pulling new changes that contain migrations, run:
+
+```bash
+npm install
+npx prisma migrate dev
+npx prisma generate
+```
 
 ## Environment Variables
 
-| Variable | Purpose |
-| --- | --- |
-| `DATABASE_URL` | PostgreSQL connection string. |
-| `JWT_SECRET` | Secret used to sign and verify access tokens. |
-| `FRONTEND_URL` | Allowed CORS origin and email-link destination. |
-| `EMAIL_FROM` | Verified sender address for Resend. |
-| `RESEND_API_KEY` | Resend API key for verification and password-reset emails. |
-| `INTERVIEW_TIMEZONE` | Time zone used to render interview times in email and to run the reminder cron. Defaults to `Asia/Jakarta`. |
-
-Interview reminders are sent by a cron job that runs every day at 08:00 in
-`INTERVIEW_TIMEZONE` and emails every scheduled interview taking place on the
-following calendar day (H-1).
-
-When Resend is not configured outside production, Polaris logs a local email preview instead of sending an email.
-
-## Main Capabilities
-
-- Email/password registration for job seekers and company administrators.
-- One-time email verification and password-reset links with a one-hour expiry.
-- Protected profile management, password changes, and JPG/PNG avatar uploads up to 1 MB.
-- Published job discovery sorted by newest entries or by proximity within a 50 km radius.
-- Job applications, pre-selection testing, interview scheduling, subscriptions, reviews, and developer-managed skill assessments.
-
-## API Overview
-
-| Method | Endpoint | Description |
+| Variable | Required | Description |
 | --- | --- | --- |
-| `POST` | `/auth/register` | Creates a job seeker or company admin account. |
-| `POST` | `/auth/login` | Starts an authenticated JWT session. |
-| `GET` | `/auth/me` | Returns the active user profile. |
-| `GET` | `/auth/dashboard-overview` | Returns live dashboard counters for the active user. |
-| `PATCH` | `/auth/profile` | Updates personal or company profile data. |
-| `PUT` | `/auth/avatar` | Uploads a JPEG or PNG avatar up to 1 MB. |
-| `GET` | `/jobs?limit=5` | Returns the newest published jobs. |
-| `GET` | `/jobs?latitude=-6.2&longitude=106.8` | Returns nearby published jobs in a 50 km radius. |
-| `GET` | `/jobs?city=Jakarta` | Returns published jobs for a manually selected city. |
-| `POST` | `/reviews/:companyId` | Creates a company review. |
-| `GET` | `/assessment/discovery` | Lists available skill assessments. |
-| `POST` | `/job-posting/:slug/interviews` | Schedules interviews for one or more applicants. |
-| `GET` | `/job-posting/:slug/interviews` | Lists interview schedules for a job posting. |
-| `GET` | `/job-posting/:slug/interviews/:interviewId` | Returns a single interview schedule. |
-| `PATCH` | `/job-posting/:slug/interviews/:interviewId` | Reschedules, annotates, or changes interview status. |
-| `DELETE` | `/job-posting/:slug/interviews/:interviewId` | Removes an interview schedule. |
+| `DATABASE_URL` | Yes | PostgreSQL connection string. |
+| `JWT_SECRET` | Yes | Long random secret used to sign access tokens. |
+| `FRONTEND_URL` | Yes | Allowed CORS origin and destination for verification/certificate links. |
+| `PORT` | No | HTTP port; defaults to `8000`. |
+| `GOOGLE_CLIENT_ID` | For Google Sign-In | OAuth Web Client ID; must match the frontend value. |
+| `RESEND_API_KEY` | Production email | Resend API key. Missing local credentials fall back to console previews. |
+| `EMAIL_FROM` | Production email | Verified Resend sender, such as `Polaris <noreply@example.com>`. |
+| `GEOCODING_USER_AGENT` | Recommended | Identifies Polaris to Nominatim and location providers. Include a contact email. |
+| `PHOTON_API_URL` | No | Worldwide location-search provider; defaults to `https://photon.komoot.io`. |
+| `CLOUDINARY_CLOUD_NAME` | No | Cloudinary account name. Without Cloudinary, job banners are stored locally. |
+| `CLOUDINARY_API_KEY` | No | Cloudinary API key. |
+| `CLOUDINARY_API_SECRET` | No | Cloudinary API secret. |
+| `MIDTRANS_SERVER_KEY` | For payments | Midtrans server key. |
+| `MIDTRANS_CLIENT_KEY` | For payments | Midtrans client key. |
+| `MIDTRANS_IS_PRODUCTION` | No | Use `true` for production; otherwise sandbox mode is used. |
+| `INTERVIEW_TIMEZONE` | No | Interview email/reminder timezone; defaults to `Asia/Jakarta`. |
+| `SUBSCRIPTION_TIMEZONE` | No | Subscription reminder timezone; defaults to `Asia/Jakarta`. |
+| `NODE_ENV` | No | Set to `production` in production. |
 
-Protected endpoints require:
+Never commit real secrets or production credentials.
+
+## Authentication
+
+Polaris supports:
+
+- Job-seeker and company-admin registration with email/password
+- Google Sign-In and automatic Google job-seeker registration
+- One-time email verification links with a one-hour expiry
+- One-time forgot/reset-password links
+- Profile, avatar, company-logo, and company-banner management
+- `JOB_SEEKER`, `COMPANY_ADMIN`, and `DEVELOPER` access control
+
+Google Identity Services sends a credential to `POST /auth/google`. The API verifies its signature, audience, expiry, and verified email using `GOOGLE_CLIENT_ID`; a Google client secret is not used.
+
+Protected requests use:
 
 ```http
 Authorization: Bearer <access-token>
 ```
 
-## Interview Scheduling
+## API Groups
 
-Interview endpoints live under a job posting and are restricted to the company
-administrator who owns it.
+| Prefix | Purpose |
+| --- | --- |
+| `/auth` | Registration, login, Google auth, verification, password reset, profile and media. |
+| `/jobs` | Public job discovery/details, applications, and applicant pre-selection-test actions. |
+| `/job-posting` | Company job management, applicants, interviews, and test management. |
+| `/applications` | Current job seeker's application lists and details. |
+| `/companies` | Public company directory and company details. |
+| `/profiles` | Public applicant/company-admin profiles and quality data. |
+| `/regions` | Countries, states, cities, Indonesian regions, and worldwide search. |
+| `/assessment` | Skill discovery, attempts, results, badges, certificates, and developer management. |
+| `/subscriptions` | Public plans, purchases, payment notifications, and developer management. |
+| `/reviews` | Company reviews and aggregated Stories data. |
+| `/analytics` | Company/developer analytics. |
+| `/cv` | Subscriber CV generation. |
 
-```http
-POST /job-posting/:slug/interviews
-Content-Type: application/json
+### Representative Endpoints
 
-{
-  "schedules": [
-    {
-      "applicationId": 12,
-      "interviewDate": "2026-09-10T02:30:00.000Z",
-      "locationOrLink": "https://meet.google.com/abc-defg-hij",
-      "notes": "Technical round"
-    },
-    {
-      "applicationId": 18,
-      "interviewDate": "2026-09-10T04:00:00.000Z",
-      "locationOrLink": "Polaris HQ, 4th floor"
-    }
-  ]
-}
-```
+| Method | Endpoint | Access |
+| --- | --- | --- |
+| `POST` | `/auth/register` | Public |
+| `POST` | `/auth/login` | Public |
+| `POST` | `/auth/google` | Public |
+| `GET` | `/auth/me` | Authenticated |
+| `PATCH` | `/auth/profile` | Authenticated |
+| `PUT` / `DELETE` | `/auth/avatar` | Authenticated |
+| `PUT` / `DELETE` | `/auth/company-media/:field` | Company admin |
+| `GET` | `/jobs` | Public |
+| `GET` | `/jobs/:slug` | Public |
+| `POST` | `/jobs/:slug/applications` | Verified job seeker |
+| `GET` | `/applications/me/page` | Job seeker |
+| `POST` | `/job-posting` | Company admin |
+| `PATCH` | `/job-posting/:slug/publish` | Owning company admin |
+| `GET` | `/job-posting/:slug/applicants` | Owning company admin |
+| `POST` | `/job-posting/:slug/interviews` | Owning company admin |
+| `GET` | `/regions/search?q=Bandung` | Public |
+| `GET` | `/reviews/stories` | Public |
+| `POST` | `/reviews/:companyId` | Authenticated eligible reviewer |
+| `GET` | `/assessment/certificates/verify/:certificateCode` | Public |
+| `POST` | `/subscriptions/purchase` | Authenticated job seeker |
+| `POST` | `/cv/generate` | Eligible subscriber |
 
-1. Up to 20 applicants can be scheduled in one request, and every applicant must
-   receive a distinct date and time. Slots already taken on the same job posting
-   are rejected with `409`.
-2. Applicants on `DRAFT` or `REJECTED` status cannot be interviewed, and an
-   applicant can only hold one interview at a time.
-3. Scheduled applicants move to `INTERVIEW` status and are emailed their
-   schedule. Rescheduling emails the new details and clears the sent reminder so
-   a fresh one goes out; cancelling and deleting email the applicant as well.
-4. A background job emails both the applicant and the company administrator at
-   least H-1 before the interview. `reminderSentAt` keeps each reminder to one
-   delivery, and a failed send is retried on the next run.
+## Location and Geocoding
 
-## Authentication Notes
+The API acts as the frontend's location gateway:
 
-1. Zod validates input before database operations.
-2. Passwords are stored as salted `scrypt` hashes, never plaintext.
-3. Verification and reset tokens are random values whose SHA-256 hashes are stored with expiration times.
-4. A consumed token is cleared immediately, making every link one-time use.
-5. JWTs only contain identity and role claims; fresh profile data is always read from PostgreSQL.
+- `wilayah.id` supplies Indonesian provinces and regencies.
+- Photon supplies worldwide city/state/country type-to-search.
+- CountriesNow supplies country/state/city lists with a fallback country provider.
+- Nominatim geocodes job locations for nearest-job sorting.
 
-## Database ERD
+Responses are cached in memory and provider calls are rate-limited. Published jobs without coordinates are backfilled in small batches when location-aware searches run.
 
-The diagram below is generated from [`prisma/schema.prisma`](./prisma/schema.prisma). After changing a Prisma model, run:
+## Uploads
+
+- Avatars: JPEG/PNG, maximum 1 MB.
+- Company logo/banner: JPEG/PNG/WEBP, maximum 3 MB.
+- Job banners: multipart upload, maximum 2 MB; Cloudinary when configured, local storage otherwise.
+- Application CV: PDF upload through the application endpoint.
+
+Local media is served from `/uploads`.
+
+## Applications and Quality Data
+
+Application records snapshot education at submission time so later profile changes do not rewrite historical applications. The application flow supports expected-salary requests, pre-selection tests, interviews, accepted/rejected outcomes, and profile experience creation after a hire.
+
+Public profiles and company pages expose calculated quality scores and metric breakdowns. Missing metrics are returned as unavailable instead of artificially lowering a score, while completeness remains part of the score. Company reviews feed both company profiles and the public Stories page.
+
+## Subscriptions
+
+Database enum values remain `STANDARD` and `PROFESSIONAL`; the frontend presents them as **Polaris Plus** and **Polaris Pro**. The seed creates:
+
+- `STANDARD`: IDR 25,000/month, CV Generator, two skill assessments
+- `PROFESSIONAL`: IDR 100,000/month, CV Generator, unlimited assessments, priority review
+
+Midtrans notifications update payment/subscription state. A scheduled job expires ended subscriptions hourly, and another sends expiry reminders daily.
+
+## Scheduled Jobs
+
+- Interview reminders: daily at 08:00 in `INTERVIEW_TIMEZONE`
+- Subscription expiry reminders: daily at 08:00 in `SUBSCRIPTION_TIMEZONE`
+- Subscription expiration: hourly
+
+## Database and ERD
+
+After changing `prisma/schema.prisma`:
 
 ```bash
+npx prisma migrate dev --name describe_the_change
+npx prisma generate
 npm run docs:erd
 ```
 
-<!-- ERD:START -->
-![Polaris database ERD](./docs/erd.svg)
-<!-- ERD:END -->
+The generated diagram is stored at [`docs/erd.svg`](./docs/erd.svg).
 
 ## Testing
 
+Create `.env.test` with a dedicated disposable database:
+
+```env
+DATABASE_URL_TEST=postgresql://user:password@localhost:5432/polaris_test
+JWT_SECRET_TEST=replace-with-a-test-secret
+```
+
+Then run:
+
 ```bash
-npm run test
 npm run test:run
 ```
 
-Tests load `.env.test` and use `DATABASE_URL_TEST`. Never point test variables at a development or production database.
+Never point `DATABASE_URL_TEST` at development or production data.
