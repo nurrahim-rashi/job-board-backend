@@ -313,10 +313,18 @@ export const startAssessmentService = async (
 ) => {
   const activeSubscription = await checkActiveSubscription(userId);
 
+  if (!activeSubscription.startDate || !activeSubscription.endDate) {
+    throw new ApiError("Active subscription dates are invalid", 500);
+  }
+
   if (activeSubscription.subscription.name === "STANDARD") {
     const usedAttempts = await prisma.skillAssessmentResult.count({
       where: {
         userId,
+        startedAt: {
+          gte: activeSubscription.startDate,
+          lte: activeSubscription.endDate,
+        },
       },
     });
 

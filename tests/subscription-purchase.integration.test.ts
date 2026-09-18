@@ -42,6 +42,7 @@ const createJobSeeker = async () => {
       email: `subscription-purchase-${Date.now()}-${Math.random()}@test.com`,
       password: "test-password",
       role: "JOB_SEEKER",
+      emailVerifiedAt: new Date(),
     },
   });
 

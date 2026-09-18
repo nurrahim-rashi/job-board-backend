@@ -1219,7 +1219,13 @@ describe("POST /assessment", () => {
 
     testUserId = jobSeeker.id;
 
-    await createActiveSubscription(jobSeeker.id);
+    const activeSubscription = await createActiveSubscription(jobSeeker.id);
+
+    const subscriptionStartedAt = activeSubscription.startDate;
+
+    if (!subscriptionStartedAt) {
+      throw new Error("Test subscription startDate was not created");
+    }
 
     const assessment = await createTestAssessment();
 
@@ -1232,16 +1238,16 @@ describe("POST /assessment", () => {
           assessmentId: assessment.id,
           score: 80,
           isPassed: true,
-          startedAt: new Date(Date.now() - 60 * 60 * 1000),
-          completedAt: new Date(Date.now() - 59 * 60 * 1000),
+          startedAt: new Date(subscriptionStartedAt.getTime() + 1000),
+          completedAt: new Date(subscriptionStartedAt.getTime() + 2000),
         },
         {
           userId: jobSeeker.id,
           assessmentId: assessment.id,
           score: 60,
           isPassed: false,
-          startedAt: new Date(Date.now() - 30 * 60 * 1000),
-          completedAt: new Date(Date.now() - 29 * 60 * 1000),
+          startedAt: new Date(subscriptionStartedAt.getTime() + 3000),
+          completedAt: new Date(subscriptionStartedAt.getTime() + 4000),
         },
       ],
     });
@@ -1257,6 +1263,55 @@ describe("POST /assessment", () => {
     expect(response.body.message).toBe(
       "Standard subscription allows a maximum of 2 skill assessment attempts",
     );
+  });
+
+  it("Should not count assessment attempts from before the current Standard subscription", async () => {
+    const jobSeeker = await prisma.user.create({
+      data: {
+        name: "Renewed Standard User",
+        email: `renewed-standard-${Date.now()}@test.com`,
+        password: "test-password",
+        role: "JOB_SEEKER",
+      },
+    });
+
+    testUserId = jobSeeker.id;
+
+    const assessment = await createTestAssessment();
+
+    await create25Questions(assessment.id);
+
+    await prisma.skillAssessmentResult.createMany({
+      data: [
+        {
+          userId: jobSeeker.id,
+          assessmentId: assessment.id,
+          score: 80,
+          isPassed: true,
+          startedAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
+          completedAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
+        },
+        {
+          userId: jobSeeker.id,
+          assessmentId: assessment.id,
+          score: 60,
+          isPassed: false,
+          startedAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
+          completedAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
+        },
+      ],
+    });
+
+    await createActiveSubscription(jobSeeker.id);
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/start`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(201);
+    expect(response.body.data.resultId).toEqual(expect.any(Number));
   });
 
   it("Should allow Professional subscriber to take more than 2 assessment attempts", async () => {

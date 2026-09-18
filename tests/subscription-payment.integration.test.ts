@@ -45,6 +45,7 @@ describe("Subscription payment notification", () => {
         email: `payment-${unique}@example.com`,
         password: "hashed-password",
         role: "JOB_SEEKER",
+        emailVerifiedAt: new Date(),
       },
     });
 
