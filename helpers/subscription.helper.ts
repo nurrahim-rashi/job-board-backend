@@ -6,7 +6,12 @@ export const checkActiveSubscription = async (userId: number) => {
     where: {
       userId,
       status: "ACTIVE",
+      startDate: {
+        not: null,
+        lte: new Date(),
+      },
       endDate: {
+        not: null,
         gte: new Date(),
       },
     },
