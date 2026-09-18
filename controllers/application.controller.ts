@@ -22,7 +22,10 @@ export async function listMyApplicationsPageController(req: Request, res: Respon
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(20, Math.max(1, Number(req.query.limit) || 8));
     const view = req.query.view === "interviews" || req.query.view === "tests" || req.query.view === "closed" ? req.query.view : undefined;
-    res.status(200).json({ data: await getMyApplicationsPage((req as AuthenticatedRequest).user.id, page, limit, view) });
+    const allowedStatuses = ["SCHEDULED", "COMPLETED", "CANCELLED", "ACCEPTED", "REJECTED"] as const;
+    const requestedStatus = String(req.query.status ?? "");
+    const status = allowedStatuses.find((item) => item === requestedStatus);
+    res.status(200).json({ data: await getMyApplicationsPage((req as AuthenticatedRequest).user.id, page, limit, view, status) });
   } catch (error) { next(error); }
 }
 

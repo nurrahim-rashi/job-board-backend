@@ -1,30 +1,337 @@
 import { ApiError } from "../utils/api-error.js";
 
 const baseUrl = "https://wilayah.id/api";
+const countriesNowBaseUrl = "https://countriesnow.space/api/v0.1";
 const cache = new Map<string, { expiresAt: number; data: unknown }>();
 
+const indonesianProvinceAliases: Record<string, string> = {
+  "north sumatra": "Sumatera Utara",
+  "west sumatra": "Sumatera Barat",
+  "south sumatra": "Sumatera Selatan",
+  "riau islands": "Kepulauan Riau",
+  "bangka belitung islands": "Kepulauan Bangka Belitung",
+  "west java": "Jawa Barat",
+  "central java": "Jawa Tengah",
+  "east java": "Jawa Timur",
+  "special region of yogyakarta": "Daerah Istimewa Yogyakarta",
+  "west nusa tenggara": "Nusa Tenggara Barat",
+  "east nusa tenggara": "Nusa Tenggara Timur",
+  "west kalimantan": "Kalimantan Barat",
+  "central kalimantan": "Kalimantan Tengah",
+  "south kalimantan": "Kalimantan Selatan",
+  "east kalimantan": "Kalimantan Timur",
+  "north kalimantan": "Kalimantan Utara",
+  "north sulawesi": "Sulawesi Utara",
+  "central sulawesi": "Sulawesi Tengah",
+  "south sulawesi": "Sulawesi Selatan",
+  "southeast sulawesi": "Sulawesi Tenggara",
+  "west sulawesi": "Sulawesi Barat",
+  "north maluku": "Maluku Utara",
+  "west papua": "Papua Barat",
+  "southwest papua": "Papua Barat Daya",
+  "central papua": "Papua Tengah",
+  "highland papua": "Papua Pegunungan",
+  "south papua": "Papua Selatan",
+  "jakarta special capital region": "DKI Jakarta",
+};
+
+export function provinceSearchNames(name?: string) {
+  if (!name?.trim()) return [];
+  const original = name.trim();
+  const alias = indonesianProvinceAliases[original.toLocaleLowerCase("en")];
+  return [...new Set([original, alias].filter((value): value is string => Boolean(value)))];
+}
+
 export type Country = { code: string; name: string };
+
+export type WorldwideLocation = {
+  id: string;
+  name: string;
+  label: string;
+  type: "city" | "state" | "country";
+  province: string | null;
+  country: string;
+  countryCode: string;
+  latitude: number;
+  longitude: number;
+};
+
+type PhotonFeature = {
+  properties?: {
+    osm_type?: string;
+    osm_id?: number;
+    type?: "city" | "county" | "state" | "country";
+    name?: string;
+    state?: string;
+    country?: string;
+    countrycode?: string;
+  };
+  geometry?: { coordinates?: [number, number] };
+};
+
+let photonQueue: Promise<void> = Promise.resolve();
+let lastPhotonRequestAt = 0;
+
+const wait = (milliseconds: number) =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function observePhotonRateLimit() {
+  const previous = photonQueue;
+  let release!: () => void;
+  photonQueue = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await previous;
+  const remaining = 350 - (Date.now() - lastPhotonRequestAt);
+  if (remaining > 0) await wait(remaining);
+  lastPhotonRequestAt = Date.now();
+  release();
+}
+
+const uniqueParts = (...parts: Array<string | undefined>) => {
+  const seen = new Set<string>();
+  return parts.filter((part): part is string => {
+    const value = part?.trim();
+    if (!value) return false;
+    const key = value.toLocaleLowerCase("en");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+export async function searchWorldwideLocations(
+  search: string,
+): Promise<WorldwideLocation[]> {
+  const query = search.trim().slice(0, 80);
+  if (query.length < 2) return [];
+
+  const cacheKey = `worldwide-location:${query.toLocaleLowerCase("en")}`;
+  const cached = cache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now())
+    return cached.data as WorldwideLocation[];
+
+  await observePhotonRateLimit();
+  const queuedCache = cache.get(cacheKey);
+  if (queuedCache && queuedCache.expiresAt > Date.now())
+    return queuedCache.data as WorldwideLocation[];
+
+  try {
+    const params = new URLSearchParams({ q: query, limit: "12", lang: "en" });
+    for (const layer of ["city", "county", "state", "country"])
+      params.append("layer", layer);
+
+    const photonBaseUrl = (
+      process.env.PHOTON_API_URL ?? "https://photon.komoot.io"
+    ).replace(/\/$/, "");
+    const response = await fetch(`${photonBaseUrl}/api/?${params.toString()}`, {
+      signal: AbortSignal.timeout(8_000),
+      headers: {
+        Accept: "application/json",
+        "Accept-Language": "en",
+        "User-Agent":
+          process.env.GEOCODING_USER_AGENT ?? "PolarisJobBoard/1.0",
+      },
+    });
+    if (!response.ok) throw new Error(`Photon returned ${response.status}`);
+
+    const payload = (await response.json()) as { features?: PhotonFeature[] };
+    const seen = new Set<string>();
+    const locations = (payload.features ?? [])
+      .map((feature): WorldwideLocation | null => {
+        const properties = feature.properties;
+        const coordinates = feature.geometry?.coordinates;
+        const name = properties?.name?.trim();
+        const country = properties?.country?.trim();
+        const longitude = coordinates?.[0];
+        const latitude = coordinates?.[1];
+        if (
+          !properties?.type ||
+          !name ||
+          !country ||
+          !Number.isFinite(latitude) ||
+          !Number.isFinite(longitude)
+        )
+          return null;
+
+        const type =
+          properties.type === "country"
+            ? "country"
+            : properties.type === "state"
+              ? "state"
+              : "city";
+        const label = uniqueParts(
+          name,
+          type === "city" ? properties.state : undefined,
+          country,
+        ).join(", ");
+        const dedupeKey = `${type}:${label.toLocaleLowerCase("en")}`;
+        if (seen.has(dedupeKey)) return null;
+        seen.add(dedupeKey);
+
+        return {
+          id: `${properties.osm_type ?? "place"}-${properties.osm_id ?? dedupeKey}`,
+          name,
+          label,
+          type,
+          province: properties.state?.trim() || null,
+          country,
+          countryCode: properties.countrycode?.toUpperCase() ?? "",
+          latitude: latitude!,
+          longitude: longitude!,
+        };
+      })
+      .filter((location): location is WorldwideLocation => location !== null)
+      .slice(0, 8);
+
+    cache.set(cacheKey, {
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      data: locations,
+    });
+    return locations;
+  } catch (error) {
+    console.error(`Unable to search worldwide locations for "${query}"`, error);
+    return [];
+  }
+}
 
 export async function getCountries(): Promise<Country[]> {
   const cacheKey = "countries";
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.data as Country[];
   try {
-    const response = await fetch("https://restcountries.com/v3.1/all?fields=name,cca2", {
-      signal: AbortSignal.timeout(8_000),
-      headers: { Accept: "application/json" },
-    });
-    if (!response.ok) throw new Error(`REST Countries returned ${response.status}`);
-    const payload = await response.json() as Array<{ cca2?: string; name?: { common?: string } }>;
-    const countries = payload
-      .filter((country) => country.cca2 && country.name?.common)
-      .map((country) => ({ code: country.cca2!, name: country.name!.common! }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    let countries: Country[] = [];
+
+    try {
+      const response = await fetch(
+        `${countriesNowBaseUrl}/countries/iso`,
+        {
+          signal: AbortSignal.timeout(8_000),
+          headers: { Accept: "application/json" },
+        },
+      );
+      if (!response.ok)
+        throw new Error(`Countries API returned ${response.status}`);
+      const payload = (await response.json()) as {
+        data?: Array<{ Iso2?: string; name?: string }>;
+      };
+      countries = (payload.data ?? [])
+        .filter((country) => country.Iso2 && country.name)
+        .map((country) => ({
+          code: country.Iso2!,
+          name: country.name!,
+        }));
+    } catch (primaryError) {
+      console.warn("Primary country provider unavailable", primaryError);
+      const response = await fetch(
+        "https://countries.dev/countries?fields=name,alpha2Code&limit=300",
+        {
+          signal: AbortSignal.timeout(8_000),
+          headers: { Accept: "application/json" },
+        },
+      );
+      if (!response.ok)
+        throw new Error(`Countries fallback returned ${response.status}`);
+      const payload = (await response.json()) as Array<{
+        alpha2Code?: string;
+        name?: string;
+      }>;
+      countries = payload
+        .filter((country) => country.alpha2Code && country.name)
+        .map((country) => ({
+          code: country.alpha2Code!,
+          name: country.name!,
+        }));
+    }
+
+    countries = countries.sort((a, b) => a.name.localeCompare(b.name));
+    if (countries.length < 2) throw new Error("Country list is incomplete");
     cache.set(cacheKey, { expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, data: countries });
     return countries;
   } catch (error) {
     console.error("Unable to load countries", error);
     return [{ code: "ID", name: "Indonesia" }];
+  }
+}
+
+export async function getCountryStates(country: string): Promise<Country[]> {
+  const normalizedCountry = country.trim().slice(0, 120);
+  const cacheKey = `worldwide-states:${normalizedCountry.toLocaleLowerCase("en")}`;
+  const cached = cache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.data as Country[];
+
+  try {
+    const params = new URLSearchParams({ country: normalizedCountry });
+    const response = await fetch(
+      `${countriesNowBaseUrl}/countries/states/q?${params.toString()}`,
+      {
+        signal: AbortSignal.timeout(8_000),
+        headers: { Accept: "application/json" },
+      },
+    );
+    if (!response.ok)
+      throw new Error(`Countries API returned ${response.status}`);
+    const payload = (await response.json()) as {
+      data?: { states?: Array<{ name?: string; state_code?: string }> };
+    };
+    const states = (payload.data?.states ?? [])
+      .filter((state) => state.name)
+      .map((state) => ({
+        code: state.state_code || state.name!,
+        name: state.name!,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    cache.set(cacheKey, {
+      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+      data: states,
+    });
+    return states;
+  } catch (error) {
+    console.error(`Unable to load states for ${normalizedCountry}`, error);
+    throw new ApiError("State data is temporarily unavailable", 502);
+  }
+}
+
+export async function getStateCities(
+  country: string,
+  state: string,
+): Promise<Country[]> {
+  const normalizedCountry = country.trim().slice(0, 120);
+  const normalizedState = state.trim().slice(0, 120);
+  const cacheKey = `worldwide-cities:${normalizedCountry.toLocaleLowerCase("en")}:${normalizedState.toLocaleLowerCase("en")}`;
+  const cached = cache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.data as Country[];
+
+  try {
+    const params = new URLSearchParams({
+      country: normalizedCountry,
+      state: normalizedState,
+    });
+    const response = await fetch(
+      `${countriesNowBaseUrl}/countries/state/cities/q?${params.toString()}`,
+      {
+        signal: AbortSignal.timeout(8_000),
+        headers: { Accept: "application/json" },
+      },
+    );
+    if (!response.ok)
+      throw new Error(`Countries API returned ${response.status}`);
+    const payload = (await response.json()) as { data?: string[] };
+    const cities = [...new Set(payload.data ?? [])]
+      .filter(Boolean)
+      .map((name) => ({ code: name, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    cache.set(cacheKey, {
+      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+      data: cities,
+    });
+    return cities;
+  } catch (error) {
+    console.error(
+      `Unable to load cities for ${normalizedState}, ${normalizedCountry}`,
+      error,
+    );
+    throw new ApiError("City data is temporarily unavailable", 502);
   }
 }
 

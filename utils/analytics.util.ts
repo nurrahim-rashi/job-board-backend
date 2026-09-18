@@ -35,12 +35,32 @@ export interface JobApplicationStat {
   slug: string;
   category: JobCategory;
   city: string;
+  province: string | null;
+  country: string;
   companyId: number;
   companyName: string;
   applications: number;
   salarySum: number;
   salarySamples: number;
 }
+
+export const formatLocationLabel = (
+  city?: string | null,
+  provinceOrState?: string | null,
+  country?: string | null,
+) => {
+  const parts = [city?.trim(), provinceOrState?.trim(), country?.trim()]
+    .filter(Boolean) as string[];
+
+  return parts
+    .filter(
+      (part, index) =>
+        parts.findIndex(
+          (candidate) => candidate.toLocaleLowerCase() === part.toLocaleLowerCase(),
+        ) === index,
+    )
+    .join(", ");
+};
 
 export const rangeStart = (months: number): Date => {
   const now = new Date();
@@ -209,6 +229,8 @@ export const getJobApplicationStats = async (
       slug: true,
       category: true,
       cityLocation: true,
+      provinceLocation: true,
+      countryLocation: true,
       company: { select: { id: true, companyName: true } },
     },
   });
@@ -226,6 +248,8 @@ export const getJobApplicationStats = async (
         slug: job.slug,
         category: job.category,
         city: job.cityLocation,
+        province: job.provinceLocation,
+        country: job.countryLocation,
         companyId: job.company.id,
         companyName: job.company.companyName,
         applications: row._count._all,

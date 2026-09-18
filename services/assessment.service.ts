@@ -13,7 +13,7 @@ import { randomUUID } from "node:crypto";
 export const getPublicSkillNamesService = async () =>
   prisma.skillAssessment.findMany({
     orderBy: { skillName: "asc" },
-    select: { skillName: true },
+    select: { id: true, skillName: true },
   });
 
 export const createAssessmentService = async (

@@ -19,6 +19,8 @@ const applicationSelect = {
       slug: true,
       title: true,
       cityLocation: true,
+      provinceLocation: true,
+      countryLocation: true,
       category: true,
       salaryMin: true,
       salaryMax: true,
@@ -122,14 +124,34 @@ export async function getMyApplicationsPage(
   page: number,
   limit: number,
   view?: "interviews" | "tests" | "closed",
+  filterStatus?:
+    | "SCHEDULED"
+    | "COMPLETED"
+    | "CANCELLED"
+    | "ACCEPTED"
+    | "REJECTED",
 ) {
-  const where = {
+  const where: Prisma.JobApplicationWhereInput = {
     userId,
     status: { not: "DRAFT" as const },
-    ...(view === "interviews" ? { interview: { isNot: null } } : {}),
+    ...(view === "interviews"
+      ? {
+          interview:
+            filterStatus === "SCHEDULED" ||
+            filterStatus === "COMPLETED" ||
+            filterStatus === "CANCELLED"
+              ? { is: { status: filterStatus } }
+              : { isNot: null },
+        }
+      : {}),
     ...(view === "tests" ? { status: "TEST_ASSIGNED" as const } : {}),
     ...(view === "closed"
-      ? { status: { in: ["ACCEPTED" as const, "REJECTED" as const] } }
+      ? {
+          status:
+            filterStatus === "ACCEPTED" || filterStatus === "REJECTED"
+              ? filterStatus
+              : { in: ["ACCEPTED" as const, "REJECTED" as const] },
+        }
       : {}),
   };
   const [items, total] = await Promise.all([

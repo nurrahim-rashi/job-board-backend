@@ -19,6 +19,13 @@ const jobFields = z.object({
     error: () => "Selected category is invalid",
   }),
   cityLocation: z.string().trim().min(1, "City location is required"),
+  provinceLocation: z.string().trim().max(120).optional(),
+  countryLocation: z
+    .string()
+    .trim()
+    .min(2, "Country is required")
+    .max(120)
+    .default("Indonesia"),
   salaryMin: z.coerce
     .number()
     .int()
@@ -63,6 +70,12 @@ export const createJobSchema = jobFields.refine(
 
 export const updateJobSchema = jobFields
   .partial()
+  .extend({
+    removeBanner: z.preprocess(
+      (value) => value === true || value === "true",
+      z.boolean(),
+    ).optional(),
+  })
   .refine(salaryRangeCheck, salaryRangeMessage);
 
 export const jobQuerySchema = z.object({

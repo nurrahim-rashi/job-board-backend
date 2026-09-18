@@ -96,6 +96,11 @@ export async function uploadAvatarController(req: Request, res: Response) {
   return res.status(200).json({ message: "Avatar uploaded successfully", data: user });
 }
 
+export async function removeAvatarController(req: Request, res: Response) {
+  const user = await updateAvatar(userId(req), null);
+  return res.status(200).json({ message: "Profile photo removed", data: user });
+}
+
 export async function uploadCompanyMediaController(req: Request, res: Response) {
   const field = req.params.field;
   if (field !== "logo" && field !== "banner") {

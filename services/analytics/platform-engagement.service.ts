@@ -69,7 +69,13 @@ export const getPlatformEngagementService = async (query: AnalyticsQueryInput) =
   ] = await Promise.all([
     prisma.company.findMany({
       where: { id: { in: topCompanyIds } },
-      select: { id: true, companyName: true, city: true },
+      select: {
+        id: true,
+        companyName: true,
+        city: true,
+        province: true,
+        country: true,
+      },
     }),
     prisma.jobPosting.groupBy({
       by: ["companyId"],
@@ -167,6 +173,8 @@ export const getPlatformEngagementService = async (query: AnalyticsQueryInput) =
           id: company.id,
           companyName: company.companyName,
           city: company.city,
+          province: company.province,
+          country: company.country,
           jobs: jobsByCompany.get(companyId) ?? 0,
           applications,
           hires,
