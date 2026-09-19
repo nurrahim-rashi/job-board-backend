@@ -1,5 +1,5 @@
-import type { JobPosting, Prisma } from "../generated/prisma/client.ts";
-import type { UserRole } from "../generated/prisma/enums.ts";
+import type { JobPosting, Prisma } from "../generated/prisma/client.js";
+import type { UserRole } from "../generated/prisma/enums.js";
 
 type ApplicationWithJob = Prisma.JobApplicationGetPayload<{
   include: { job: true };
