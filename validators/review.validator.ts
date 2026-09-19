@@ -1,4 +1,5 @@
 import z from "zod";
+import { currencyCodeSchema } from "../utils/currency.js";
 
 export const createReviewSchema = z.object({
   salaryEstimate: z
@@ -8,6 +9,7 @@ export const createReviewSchema = z.object({
     .int("Salary estimate must be a whole number")
     .positive("Salary estimate must be greater than 0")
     .optional(),
+  salaryCurrency: currencyCodeSchema.default("IDR"),
 
   ratingCulture: z
     .number({

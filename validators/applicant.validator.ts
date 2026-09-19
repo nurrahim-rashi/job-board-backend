@@ -1,4 +1,5 @@
 import z from "zod";
+import { currencyCodeSchema } from "../utils/currency.js";
 
 const rangeCheck = (min?: number, max?: number) =>
   min === undefined || max === undefined || max >= min;
@@ -20,6 +21,7 @@ export const applicantQuerySchema = z
       .int()
       .positive("Expected salary should be greater than 0")
       .optional(),
+    salaryCurrency: currencyCodeSchema.optional(),
     education: z.string().trim().optional(),
     status: z
       .enum([

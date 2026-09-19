@@ -30,6 +30,7 @@ const userSelect = {
   availability: true,
   profileIntro: true,
   salaryExpectation: true,
+  salaryExpectationCurrency: true,
   profileStory: true,
   skills: true,
   profileLinks: true,

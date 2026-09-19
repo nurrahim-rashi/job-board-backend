@@ -4,6 +4,7 @@ import { getPublicCompanyQualityMap } from "./company.service.js";
 
 type CreateReviewData = {
   salaryEstimate?: number;
+  salaryCurrency: string;
   ratingCulture: number;
   ratingWorkLife: number;
   ratingFacility: number;
@@ -15,6 +16,7 @@ const publicReviewSelect = {
   id: true,
   jobTitleHeld: true,
   salaryEstimate: true,
+  salaryCurrency: true,
   ratingCulture: true,
   ratingWorkLife: true,
   ratingFacility: true,
@@ -376,6 +378,7 @@ export const createReviewService = async (
       companyId,
       jobTitleHeld: employment.job.title,
       salaryEstimate: data.salaryEstimate,
+      salaryCurrency: data.salaryCurrency,
       ratingCulture: data.ratingCulture,
       ratingWorkLife: data.ratingWorkLife,
       ratingFacility: data.ratingFacility,

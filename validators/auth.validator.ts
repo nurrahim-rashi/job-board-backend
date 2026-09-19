@@ -1,4 +1,5 @@
 import z from "zod";
+import { currencyCodeSchema } from "../utils/currency.js";
 
 const optionalYearMonth = z.preprocess((value) => {
   if (value === "" || value === null || value === undefined) return undefined;
@@ -84,6 +85,7 @@ export const updateProfileSchema = z.object({
   ]).optional(),
   profileIntro: z.string().trim().max(1000).optional(),
   salaryExpectation: z.string().trim().max(150).optional(),
+  salaryExpectationCurrency: currencyCodeSchema.optional(),
   profileStory: z.string().trim().max(10_000).optional(),
   skills: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
   profileLinks: z.array(z.object({ label: z.string().trim().min(1).max(50), url: z.url().or(z.string().startsWith("mailto:")) })).max(10).optional(),

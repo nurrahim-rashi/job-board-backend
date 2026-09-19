@@ -96,6 +96,7 @@ model User {
   availability               String       @default("")
   profileIntro               String       @default("") @db.Text
   salaryExpectation          String       @default("")
+  salaryExpectationCurrency  String       @default("IDR") @db.VarChar(3)
   profileStory               String       @default("") @db.Text
   lookingFor                 String[]     @default([])
   skills                     String[]     @default([])
@@ -163,6 +164,7 @@ model JobPosting {
   longitude           String?
   salaryMin           Int?
   salaryMax           Int?
+  salaryCurrency      String      @default("IDR") @db.VarChar(3)
   hasPreSelectionTest Boolean     @default(false)
   testDurationMinutes Int?
   tags                Json?
@@ -189,6 +191,7 @@ model JobApplication {
   userId          Int
   cvFile          String
   expectedSalary  Int?
+  expectedSalaryCurrency String @default("IDR") @db.VarChar(3)
   expectedSalaryRequestedAt DateTime?
   lastEducationSnapshot String?
   status          ApplicationStatus @default(PENDING)
@@ -324,6 +327,7 @@ model CompanyReview {
   userId         Int
   jobTitleHeld   String
   salaryEstimate Int?
+  salaryCurrency String   @default("IDR") @db.VarChar(3)
   ratingCulture  Int
   ratingWorkLife Int
   ratingFacility Int

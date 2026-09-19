@@ -1,5 +1,6 @@
 import z from "zod";
 import { JobCategory } from "../generated/prisma/enums.js";
+import { currencyCodeSchema } from "../utils/currency.js";
 
 const MAX_DATABASE_INTEGER = 2_147_483_647;
 
@@ -44,6 +45,7 @@ const jobFields = z.object({
       "Maximum salary cannot exceed 2,147,483,647",
     )
     .optional(),
+  salaryCurrency: currencyCodeSchema.default("IDR"),
   tags: z.preprocess(
     (value) => (typeof value === "string" ? value.split(",") : value),
     z.array(z.string().trim().min(1)).max(10, "Maximum 10 Tags").optional(),

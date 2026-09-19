@@ -18,6 +18,7 @@ export const getApplicantListService = async (
     maxAge,
     minSalary,
     maxSalary,
+    salaryCurrency,
     education,
     status,
     sortBy,
@@ -35,6 +36,7 @@ export const getApplicantListService = async (
         ...(maxSalary && { lte: maxSalary }),
       },
     }),
+    ...(salaryCurrency && { expectedSalaryCurrency: salaryCurrency }),
     user: {
       ...(name && { name: { contains: name, mode: "insensitive" as const } }),
       ...(birthDate && { birthDate }),
@@ -172,6 +174,7 @@ export const getApplicantListService = async (
       id: application.id,
       status: application.status,
       expectedSalary: application.expectedSalary,
+      expectedSalaryCurrency: application.expectedSalaryCurrency,
       cvFile: application.cvFile,
       appliedAt: application.createdAt,
       priorityReview: application.priorityReview,
