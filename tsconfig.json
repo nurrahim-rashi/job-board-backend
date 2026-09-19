@@ -7,8 +7,7 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "outDir": "./dist",
-    "types": ["node"]
+    "outDir": "./dist"
   },
   "exclude": ["dist", "node_modules", "scripts", "tests", "vitest.config.ts"]
 }
