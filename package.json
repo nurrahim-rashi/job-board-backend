@@ -14,7 +14,9 @@
     "start": "node dist/index.js",
     "test": "vitest",
     "test:run": "vitest run",
-    "docs:erd": "prisma generate && node scripts/generate-erd.mjs"
+    "docs:erd": "prisma generate && node scripts/generate-erd.mjs",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:seed:subscriptions": "tsx scripts/seed-subscriptions.ts"
   },
   "author": "",
   "license": "ISC",

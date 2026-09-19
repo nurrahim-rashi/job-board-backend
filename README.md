@@ -2,6 +2,16 @@
 
 Polaris API powers authentication, profiles, worldwide job discovery, applications, hiring workflows, quality scores, subscriptions, company reviews, CV generation, and skill assessments for the Polaris platform.
 
+## Production
+
+- API: [https://job-board-backend-sage.vercel.app](https://job-board-backend-sage.vercel.app)
+- Health check: [https://job-board-backend-sage.vercel.app/health](https://job-board-backend-sage.vercel.app/health)
+- Frontend: [https://www.polarisjobs.my.id](https://www.polarisjobs.my.id)
+- Runtime: Vercel Node.js serverless function
+- Database: PostgreSQL on Neon
+
+`index.ts` exports the Express application for Vercel. It only opens a local HTTP listener when `VERCEL` is not present, preventing background jobs from starting on every serverless invocation.
+
 ## Stack
 
 - Node.js, Express 5, and TypeScript
@@ -16,7 +26,7 @@ Polaris API powers authentication, profiles, worldwide job discovery, applicatio
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 22
 - npm
 - PostgreSQL
 
@@ -27,7 +37,7 @@ cp .env.example .env
 npm install
 npx prisma migrate dev
 npx prisma generate
-npx tsx scripts/seed-subscriptions.ts
+npm run db:seed:subscriptions
 npm run dev
 ```
 
@@ -40,6 +50,8 @@ npm install
 npx prisma migrate dev
 npx prisma generate
 ```
+
+`prisma migrate dev` is only for local development. Never use it against production.
 
 ## Environment Variables
 
@@ -65,6 +77,59 @@ npx prisma generate
 | `NODE_ENV` | No | Set to `production` in production. |
 
 Never commit real secrets or production credentials.
+
+## Production Deployment
+
+Create the backend Vercel project with **Root Directory** set to `api`. Configure these variables for the Production environment:
+
+```env
+DATABASE_URL=postgresql://...
+JWT_SECRET=use-a-long-random-production-secret
+NODE_ENV=production
+FRONTEND_URL=https://www.polarisjobs.my.id
+GOOGLE_CLIENT_ID=your-google-oauth-web-client-id.apps.googleusercontent.com
+RESEND_API_KEY=re_...
+EMAIL_FROM=Polaris <noreply@your-verified-domain.com>
+GEOCODING_USER_AGENT=PolarisJobBoard/1.0 (your-contact-email@example.com)
+PHOTON_API_URL=https://photon.komoot.io
+INTERVIEW_TIMEZONE=Asia/Jakarta
+SUBSCRIPTION_TIMEZONE=Asia/Jakarta
+MIDTRANS_SERVER_KEY=...
+MIDTRANS_CLIENT_KEY=...
+MIDTRANS_IS_PRODUCTION=true
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+```
+
+Only `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL`, and the integrations actually used by the environment are required to boot their corresponding features. Email verification needs Resend, Google login needs `GOOGLE_CLIENT_ID`, payments need Midtrans, and hosted media needs Cloudinary.
+
+After configuring or changing a Vercel environment variable, redeploy the backend. Existing deployments do not receive new environment values.
+
+### Production database setup
+
+Run migrations from a trusted terminal with `DATABASE_URL` pointing to the production database:
+
+```bash
+npm install
+npm run db:migrate:deploy
+npm run db:seed:subscriptions
+```
+
+Use `db:migrate:deploy`, not `prisma migrate dev`, in production. The subscription seed is idempotent and creates or updates Polaris Plus and Polaris Pro. Migrations only create/update schema; they do not copy development jobs, companies, or users into a new production database.
+
+Verify deployment after the production build completes:
+
+```text
+GET /
+GET /health
+GET /jobs?limit=1
+GET /companies?limit=1
+GET /subscriptions
+GET /regions/countries
+```
+
+`/` and `/health` should return HTTP 200. Empty `data` arrays mean the API and database are reachable but the production database has not been populated yet. `FUNCTION_INVOCATION_FAILED` means Express did not finish booting; inspect Vercel Function logs and confirm `DATABASE_URL` is available to the Production deployment.
 
 ## Authentication
 
@@ -168,6 +233,8 @@ Midtrans notifications update payment/subscription state. A scheduled job expire
 - Interview reminders: daily at 08:00 in `INTERVIEW_TIMEZONE`
 - Subscription expiry reminders: daily at 08:00 in `SUBSCRIPTION_TIMEZONE`
 - Subscription expiration: hourly
+
+These in-process schedules run with the long-lived local Node server. Vercel Functions are ephemeral, so production scheduling must invoke dedicated endpoints through Vercel Cron or run the jobs in a separate worker; do not rely on `node-cron` inside a serverless invocation.
 
 ## Database and ERD
 
