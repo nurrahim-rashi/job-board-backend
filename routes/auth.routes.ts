@@ -68,7 +68,12 @@ authRoutes.patch(
   validate(updateProfileSchema),
   updateProfileController,
 );
-authRoutes.put("/avatar", authenticated, upload.single("avatar"));
+authRoutes.put(
+  "/avatar",
+  authenticated,
+  upload.single("avatar"),
+  uploadAvatarController,
+);
 authRoutes.delete("/avatar", authenticated, removeAvatarController);
 authRoutes.put(
   "/company-media/:field",
