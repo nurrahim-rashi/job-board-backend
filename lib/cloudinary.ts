@@ -7,14 +7,16 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 
-const cloudName = process.env.CLOUDINARY_CLOUD_NAME!;
-const apiKey = process.env.CLOUDINARY_API_KEY!;
-const apiSecret = process.env.CLOUDINARY_API_SECRET!;
+const cloudinaryConfig = () => ({
+  cloudName: process.env.CLOUDINARY_CLOUD_NAME?.trim(),
+  apiKey: process.env.CLOUDINARY_API_KEY?.trim(),
+  apiSecret: process.env.CLOUDINARY_API_SECRET?.trim(),
+});
 
 /**
  * Generate Cloudinary signature (SHA1)
  */
-const generateSignature = (params: Record<string, string | number>): string => {
+const generateSignature = (params: Record<string, string | number>, apiSecret: string): string => {
   const sortedParams = Object.keys(params)
     .sort()
     .map((key) => `${key}=${params[key]}`)
@@ -34,7 +36,10 @@ export const uploadImage = async (
   folder = "job-banners",
 ) => {
   const safeFolder = folder.replace(/[^a-z0-9/_-]/gi, "-");
+  const { cloudName, apiKey, apiSecret } = cloudinaryConfig();
   if (!cloudName || !apiKey || !apiSecret) {
+    if (process.env.NODE_ENV === "production")
+      throw new ApiError("Image storage is not configured", 503);
     const extension = extname(file.originalname).toLowerCase() ||
       (file.mimetype === "image/png" ? ".png" : ".jpg");
     const uploadPath = join(process.cwd(), "uploads", safeFolder);
@@ -45,7 +50,7 @@ export const uploadImage = async (
   }
   const timestamp = Math.floor(Date.now() / 1000);
 
-  const signature = generateSignature({ folder: safeFolder, timestamp });
+  const signature = generateSignature({ folder: safeFolder, timestamp }, apiSecret);
 
   const formData = new FormData();
 
@@ -59,15 +64,23 @@ export const uploadImage = async (
   formData.append("timestamp", timestamp.toString());
   formData.append("signature", signature);
 
-  const response = await axios.post(
-    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-    formData,
-    {
-      headers: formData.getHeaders(),
-    },
-  );
-
-  return response.data;
+  try {
+    const response = await axios.post(
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      formData,
+      { headers: formData.getHeaders(), timeout: 15_000 },
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error("Cloudinary upload failed", error.response?.status, error.response?.data);
+      throw new ApiError(
+        error.response?.status === 401 ? "Image storage credentials are invalid" : "Image upload provider rejected the file",
+        502,
+      );
+    }
+    throw error;
+  }
 };
 
 /**
@@ -91,13 +104,16 @@ const extractPublicIdFromUrl = (url: string): string => {
  * Delete image by secure_url
  */
 export const removeImageByUrl = async (secureUrl: string) => {
+  const { cloudName, apiKey, apiSecret } = cloudinaryConfig();
+  if (!cloudName || !apiKey || !apiSecret)
+    throw new ApiError("Image storage is not configured", 503);
   const publicId = extractPublicIdFromUrl(secureUrl);
   const timestamp = Math.floor(Date.now() / 1000);
 
   const signature = generateSignature({
     public_id: publicId,
     timestamp,
-  });
+  }, apiSecret);
 
   const formData = new FormData();
 
