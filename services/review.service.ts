@@ -1,6 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../utils/api-error.js";
-import { getPublicCompanyDetail } from "./company.service.js";
+import { getPublicCompanyQualityMap } from "./company.service.js";
 
 type CreateReviewData = {
   salaryEstimate?: number;
@@ -159,14 +159,9 @@ export const getReviewStoriesService = async () => {
     }
   }
 
-  const companyDetails = await Promise.all(
-    [...companyGroups.keys()].map((companyId) =>
-      getPublicCompanyDetail(companyId),
-    ),
-  );
-  const detailByCompanyId = new Map(
-    companyDetails.map((company) => [company.id, company]),
-  );
+  const qualityByCompanyId = await getPublicCompanyQualityMap([
+    ...companyGroups.keys(),
+  ]);
   const verifiedHiresByCompany = new Map<number, Set<number>>();
   for (const application of acceptedApplications) {
     const tags = Array.isArray(application.job.tags)
@@ -200,14 +195,18 @@ export const getReviewStoriesService = async () => {
     })),
     companies: [...companyGroups.values()]
       .map(({ company, reviewCount, totalRating, latestReview, latestReviews }) => {
-        const detail = detailByCompanyId.get(company.id);
         return {
           company: publicStoryCompany(company),
           reviewCount,
           averageRating: oneDecimal(totalRating / reviewCount),
           verifiedSkillHires:
             verifiedHiresByCompany.get(company.id)?.size ?? 0,
-          quality: detail?.quality ?? { score: 100, metrics: [] },
+          quality:
+            qualityByCompanyId.get(company.id) ?? {
+              score: 100,
+              metrics: [],
+              badges: [],
+            },
           latestReviews: latestReviews.map((review) => ({
             id: review.id,
             jobTitleHeld: review.jobTitleHeld,
