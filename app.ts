@@ -1,6 +1,7 @@
 import cors from "cors";
 import "dotenv/config";
 import express from "express";
+import type {} from "./types/express.js";
 import { corsOptions } from "./config/cors.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { analyticsRoutes } from "./routes/analytics.routes.js";
