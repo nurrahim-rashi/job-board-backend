@@ -1,3 +1,5 @@
+import { ApiError } from "../utils/api-error.js";
+
 type EmailInput = { to: string; subject: string; text: string };
 
 function printEmailPreview(input: EmailInput) {
@@ -12,7 +14,15 @@ export async function sendEmail(input: EmailInput) {
   const isProduction = process.env.NODE_ENV === "production";
 
   if (!apiKey || !from) {
-    if (!isProduction) printEmailPreview(input);
+    if (isProduction) {
+      const missing = [
+        !apiKey ? "RESEND_API_KEY" : null,
+        !from ? "EMAIL_FROM" : null,
+      ].filter(Boolean).join(" and ");
+      console.error(`Email delivery is not configured: missing ${missing}`);
+      throw new ApiError("Email delivery is temporarily unavailable", 503);
+    }
+    printEmailPreview(input);
     return;
   }
 
@@ -40,7 +50,10 @@ export async function sendEmail(input: EmailInput) {
 
   if (!response.ok) {
     const details = await response.text();
-    if (isProduction) throw new Error("Unable to deliver email");
+    if (isProduction) {
+      console.error(`Resend rejected the email (${response.status}): ${details}`);
+      throw new ApiError("Email provider rejected the message", 502);
+    }
     console.warn(
       `Resend rejected the email (${response.status}); using local email preview. ${details}`,
     );

@@ -117,8 +117,8 @@ export async function uploadAvatarController(req: Request, res: Response) {
     return res.status(400).json({ message: "Avatar file is required" });
   }
 
-  if (file.size > 1024 * 1024) {
-    return res.status(400).json({ message: "Avatar must be 1MB or smaller" });
+  if (file.size > 3 * 1024 * 1024) {
+    return res.status(400).json({ message: "Avatar must be 3MB or smaller" });
   }
   if (!/^image\/(jpeg|png|webp)$/.test(file.mimetype)) {
     return res.status(400).json({ message: "Avatar must be a JPG, JPEG, or PNG image (WEBP is also supported)" });
@@ -150,8 +150,8 @@ export async function uploadCompanyMediaController(
     return res.status(400).json({ message: "Image file is required" });
   }
 
-  if (file.size > 3 * 1024 * 1024) {
-    return res.status(400).json({ message: "Image must be 3MB or smaller" });
+  if (file.size > 5 * 1024 * 1024) {
+    return res.status(400).json({ message: "Image must be 5MB or smaller" });
   }
   if (!/^image\/(jpeg|png|webp)$/.test(file.mimetype)) {
     return res.status(400).json({ message: "Company media must be a JPG, PNG, or WEBP image" });

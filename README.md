@@ -206,8 +206,8 @@ Responses are cached in memory and provider calls are rate-limited. Published jo
 
 ## Uploads
 
-- Avatars: JPEG/PNG, maximum 1 MB.
-- Company logo/banner: JPEG/PNG/WEBP, maximum 3 MB.
+- Avatars: JPEG/PNG/WEBP, maximum 3 MB.
+- Company logo/banner: JPEG/PNG/WEBP, maximum 5 MB.
 - Job banners: multipart upload, maximum 2 MB; Cloudinary when configured, local storage otherwise.
 - Application CV: PDF upload through the application endpoint.
 
