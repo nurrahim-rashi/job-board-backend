@@ -29,6 +29,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static("uploads"));
 
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    message: "Polaris API",
+    health: "/health",
+  });
+});
+
+app.get("/health", (_req, res) => {
+  res.status(200).json({ message: "Polaris API is healthy" });
+});
+
 // entry points
 app.use("/auth", authRoutes);
 app.use("/analytics", analyticsRoutes);
