@@ -21,6 +21,7 @@ export async function getPublicSeekerProfile(userId: number, requesterId?: numbe
       professionalRole: true,
       availability: true,
       salaryExpectation: true,
+      salaryExpectationCurrency: true,
       profileStory: true,
       skills: true,
       profileLinks: true,

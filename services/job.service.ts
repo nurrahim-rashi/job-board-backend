@@ -32,6 +32,7 @@ const jobSelect = {
   longitude: true,
   salaryMin: true,
   salaryMax: true,
+  salaryCurrency: true,
   tags: true,
   createdAt: true,
   deadline: true,

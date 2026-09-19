@@ -2,13 +2,15 @@ import type { NextFunction, Request, Response } from "express";
 import { createApplication, getMyApplicationDetail, getMyApplicationForJob, getMyApplications, getMyApplicationsPage, submitRequestedExpectedSalary } from "../services/application.service.js";
 import { ApiError } from "../utils/api-error.js";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
+import { currencyCodeSchema } from "../utils/currency.js";
 
 export async function createApplicationController(req: Request, res: Response, next: NextFunction) {
   try {
     if (!req.file) throw new ApiError("CV PDF is required", 400);
     const expectedSalary = req.body.expectedSalary ? Number(req.body.expectedSalary) : undefined;
+    const expectedSalaryCurrency = currencyCodeSchema.parse(req.body.expectedSalaryCurrency ?? "IDR");
     if (expectedSalary !== undefined && (!Number.isInteger(expectedSalary) || expectedSalary <= 0)) throw new ApiError("Expected salary must be a positive number", 400);
-    const data = await createApplication((req as AuthenticatedRequest).user.id, String(req.params.slug), req.file, expectedSalary);
+    const data = await createApplication((req as AuthenticatedRequest).user.id, String(req.params.slug), req.file, expectedSalary, expectedSalaryCurrency);
     res.status(201).json({ message: "Application submitted successfully", data });
   } catch (error) { next(error); }
 }
@@ -41,9 +43,10 @@ export async function submitExpectedSalaryController(req: Request, res: Response
   try {
     const id = Number(req.params.applicationId);
     const expectedSalary = Number(req.body.expectedSalary);
+    const expectedSalaryCurrency = currencyCodeSchema.parse(req.body.expectedSalaryCurrency ?? "IDR");
     if (!Number.isInteger(id) || id < 1) throw new ApiError("Application id is invalid", 400);
     if (!Number.isInteger(expectedSalary) || expectedSalary <= 0) throw new ApiError("Expected salary is required and must be a positive number", 400);
-    const data = await submitRequestedExpectedSalary((req as AuthenticatedRequest).user.id, id, expectedSalary);
+    const data = await submitRequestedExpectedSalary((req as AuthenticatedRequest).user.id, id, expectedSalary, expectedSalaryCurrency);
     res.status(200).json({ message: "Expected salary submitted successfully", data });
   } catch (error) { next(error); }
 }

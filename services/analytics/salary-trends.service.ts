@@ -22,7 +22,7 @@ const postingMidpoint = (salaryMin: number | null, salaryMax: number | null) => 
 };
 
 export const getSalaryTrendsService = async (query: AnalyticsQueryInput) => {
-  const { months, category, limit } = query;
+  const { months, category, limit, currency } = query;
   const createdAt = { gte: rangeStart(months) };
 
   const jobWhere: Prisma.JobPostingWhereInput = {
@@ -30,19 +30,24 @@ export const getSalaryTrendsService = async (query: AnalyticsQueryInput) => {
     isPublished: true,
     createdAt,
     ...(category && { category }),
+    salaryCurrency: currency,
     OR: [{ salaryMin: { not: null } }, { salaryMax: { not: null } }],
   };
 
   const [applicationStats, postings, reviews] = await Promise.all([
-    getJobApplicationStats(buildApplicationWhere(query)),
+    getJobApplicationStats({
+      ...buildApplicationWhere(query),
+      expectedSalaryCurrency: currency,
+    }),
     prisma.jobPosting.findMany({
       where: jobWhere,
-      select: { category: true, salaryMin: true, salaryMax: true },
+      select: { category: true, salaryMin: true, salaryMax: true, salaryCurrency: true },
     }),
     prisma.companyReview.findMany({
-      where: { createdAt, salaryEstimate: { not: null } },
+      where: { createdAt, salaryEstimate: { not: null }, salaryCurrency: currency },
       select: {
         salaryEstimate: true,
+        salaryCurrency: true,
         jobTitleHeld: true,
         company: { select: { city: true, province: true, country: true } },
       },
@@ -101,6 +106,7 @@ export const getSalaryTrendsService = async (query: AnalyticsQueryInput) => {
   }).filter((row) => row.expected !== null || row.offered !== null);
 
   return {
+    currency,
     expected: { average: average(expectedSum, expectedSamples), samples: expectedSamples },
     offered: { average: average(offeredSum, offeredSamples), samples: offeredSamples },
     reported: { average: average(reportedSum, reviews.length), samples: reviews.length },

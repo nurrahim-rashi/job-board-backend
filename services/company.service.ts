@@ -19,6 +19,7 @@ type CompanyQualitySource = {
   jobPostings: Array<{
     salaryMin: number | null;
     salaryMax: number | null;
+    salaryCurrency: string;
     description: string;
     cityLocation: string;
     deadline: Date;
@@ -344,6 +345,7 @@ export async function getPublicCompanyQualityMap(companyIds: number[]) {
           select: {
             salaryMin: true,
             salaryMax: true,
+            salaryCurrency: true,
             description: true,
             cityLocation: true,
             deadline: true,
@@ -485,6 +487,7 @@ export async function getPublicCompanies(options: {
           longitude: true,
           salaryMin: true,
           salaryMax: true,
+          salaryCurrency: true,
           description: true,
           cityLocation: true,
           deadline: true,
@@ -638,6 +641,7 @@ export async function getPublicCompanyDetail(id: number, requesterId?: number) {
           category: true,
           salaryMin: true,
           salaryMax: true,
+          salaryCurrency: true,
           createdAt: true,
           deadline: true,
         },

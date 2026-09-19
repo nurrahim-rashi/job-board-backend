@@ -9,6 +9,7 @@ const applicationSelect = {
   userId: true,
   cvFile: true,
   expectedSalary: true,
+  expectedSalaryCurrency: true,
   status: true,
   rejectionReason: true,
   createdAt: true,
@@ -24,6 +25,7 @@ const applicationSelect = {
       category: true,
       salaryMin: true,
       salaryMax: true,
+      salaryCurrency: true,
       deadline: true,
       company: { select: { id: true, companyName: true, logo: true } },
     },
@@ -44,6 +46,7 @@ export async function createApplication(
   slug: string,
   cvFile: Express.Multer.File,
   expectedSalary?: number,
+  expectedSalaryCurrency = "IDR",
 ) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -103,6 +106,7 @@ export async function createApplication(
       userId,
       cvFile: `/uploads/cvs/${cvFile.filename}`,
       expectedSalary,
+      expectedSalaryCurrency,
       lastEducationSnapshot: user.lastEducation,
     },
     select: applicationSelect,
@@ -247,15 +251,18 @@ export async function submitRequestedExpectedSalary(
   userId: number,
   applicationId: number,
   expectedSalary: number,
+  expectedSalaryCurrency: string,
 ) {
   const updated = await prisma.$queryRaw<
-    Array<{ id: number; expectedSalary: number }>
+    Array<{ id: number; expectedSalary: number; expectedSalaryCurrency: string }>
   >(Prisma.sql`
     UPDATE "job_applications"
-    SET "expectedSalary" = ${expectedSalary}, "updatedAt" = NOW()
+    SET "expectedSalary" = ${expectedSalary},
+        "expectedSalaryCurrency" = ${expectedSalaryCurrency},
+        "updatedAt" = NOW()
     WHERE "id" = ${applicationId}
       AND "userId" = ${userId}
-    RETURNING "id", "expectedSalary"
+    RETURNING "id", "expectedSalary", "expectedSalaryCurrency"
   `);
   if (!updated.length) throw new ApiError("Application was not found", 404);
   return updated[0];
