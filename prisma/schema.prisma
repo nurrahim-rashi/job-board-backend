@@ -136,6 +136,8 @@ model Company {
   logo           String?
   banner         String?
   city           String
+  province       String?
+  country        String   @default("Indonesia")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -154,6 +156,8 @@ model JobPosting {
   banner              String?
   category            JobCategory
   cityLocation        String
+  provinceLocation    String?
+  countryLocation     String       @default("Indonesia")
   latitude            String?
   longitude           String?
   salaryMin           Int?

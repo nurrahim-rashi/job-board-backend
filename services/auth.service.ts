@@ -51,6 +51,8 @@ const userSelect = {
       perks: true,
       logo: true,
       city: true,
+      province: true,
+      country: true,
     },
   },
 } as const;
@@ -115,7 +117,8 @@ export async function registerUser(input: RegisterInput) {
           userId: created.id,
           companyName: input.companyName!,
           phone: input.phone!,
-          city: input.city!,
+          // Location is completed later from the company profile editor.
+          city: "",
           profileContent: "",
         },
       });
@@ -211,10 +214,20 @@ export async function getSubscriptionStatus(userId: number) {
       status: "ACTIVE",
       endDate: { gte: new Date() },
     },
-    select: { id: true },
+    select: {
+      id: true,
+      subscription: {
+        select: {
+          name: true,
+        },
+      },
+    },
   });
 
-  return { active: Boolean(subscription) };
+  return {
+    active: Boolean(subscription),
+    plan: subscription?.subscription.name ?? null,
+  };
 }
 
 export async function verifyEmail(token: string) {
@@ -298,6 +311,8 @@ export async function updateProfile(userId: number, input: UpdateProfileInput) {
     phone,
     profileContent,
     companyCity,
+    companyProvince,
+    companyCountry,
     companyTagline,
     companySize,
     companyFounded,
@@ -330,6 +345,8 @@ export async function updateProfile(userId: number, input: UpdateProfileInput) {
         phone ||
         profileContent !== undefined ||
         companyCity ||
+        companyProvince !== undefined ||
+        companyCountry !== undefined ||
         companyTagline !== undefined ||
         companySize !== undefined ||
         companyFounded !== undefined ||
@@ -345,6 +362,14 @@ export async function updateProfile(userId: number, input: UpdateProfileInput) {
           ...(phone ? { phone } : {}),
           ...(profileContent !== undefined ? { profileContent } : {}),
           ...(companyCity ? { city: companyCity } : {}),
+          ...(companyProvince !== undefined
+            ? { province: companyProvince }
+            : userData.province !== undefined
+              ? { province: userData.province }
+              : {}),
+          ...(companyCountry !== undefined
+            ? { country: companyCountry }
+            : {}),
           ...(companyTagline !== undefined ? { tagline: companyTagline } : {}),
           ...(companySize !== undefined ? { size: companySize } : {}),
           ...(companyFounded !== undefined ? { founded: companyFounded } : {}),
@@ -398,7 +423,7 @@ export async function changePassword(
   });
 }
 
-export async function updateAvatar(userId: number, avatar: string) {
+export async function updateAvatar(userId: number, avatar: string | null) {
   await prisma.user.update({ where: { id: userId }, data: { avatar } });
   return getAuthenticatedUser(userId);
 }

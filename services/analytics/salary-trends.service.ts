@@ -6,6 +6,7 @@ import {
   buildApplicationWhere,
   getJobApplicationStats,
   mergeLabelAverages,
+  formatLocationLabel,
   rangeStart,
 } from "../../utils/analytics.util.js";
 import type { AnalyticsQueryInput } from "../../validators/analytics.validator.js";
@@ -43,7 +44,7 @@ export const getSalaryTrendsService = async (query: AnalyticsQueryInput) => {
       select: {
         salaryEstimate: true,
         jobTitleHeld: true,
-        company: { select: { city: true } },
+        company: { select: { city: true, province: true, country: true } },
       },
     }),
   ]);
@@ -113,7 +114,11 @@ export const getSalaryTrendsService = async (query: AnalyticsQueryInput) => {
     ).slice(0, limit),
     byLocation: mergeLabelAverages(
       reviews.map((review) => ({
-        label: review.company.city,
+        label: formatLocationLabel(
+          review.company.city,
+          review.company.province,
+          review.company.country,
+        ),
         sum: review.salaryEstimate ?? 0,
         samples: 1,
       })),

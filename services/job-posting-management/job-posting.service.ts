@@ -1,7 +1,7 @@
 import { JobPosting } from "../../generated/prisma/client.js";
 import { uploadImage } from "../../lib/cloudinary.js";
 import { prisma } from "../../lib/prisma.js";
-import { geocodeIndonesianLocation } from "../geocoding.service.js";
+import { geocodeLocation } from "../geocoding.service.js";
 import { ApiError } from "../../utils/api-error.js";
 import { slugify } from "../../utils/slug.js";
 import {
@@ -28,7 +28,10 @@ export const createJobService = async (
   const slug = slugify(input.title) + "-" + randomSuffix();
 
   const bannerUrl = banner ? (await uploadImage(banner)).secure_url : undefined;
-  const coordinates = await geocodeIndonesianLocation(input.cityLocation);
+  const coordinates = await geocodeLocation(
+    input.cityLocation,
+    input.countryLocation,
+  );
 
   return prisma.jobPosting.create({
     data: {
@@ -67,8 +70,9 @@ export const updateJobService = async (
     throw new ApiError("No data was modified", 400);
   }
 
-  const salaryMin = input.salaryMin ?? job.salaryMin;
-  const salaryMax = input.salaryMax ?? job.salaryMax;
+  const { removeBanner, ...jobInput } = input;
+  const salaryMin = jobInput.salaryMin ?? job.salaryMin;
+  const salaryMax = jobInput.salaryMax ?? job.salaryMax;
 
   if (salaryMin && salaryMax && salaryMax < salaryMin) {
     throw new ApiError(
@@ -78,22 +82,28 @@ export const updateJobService = async (
   }
 
   const bannerUrl = banner ? (await uploadImage(banner)).secure_url : undefined;
-  const locationChanged = input.cityLocation !== undefined && input.cityLocation !== job.cityLocation;
+  const locationChanged =
+    (jobInput.cityLocation !== undefined && jobInput.cityLocation !== job.cityLocation) ||
+    (jobInput.countryLocation !== undefined &&
+      jobInput.countryLocation !== job.countryLocation);
   const coordinates = locationChanged
-    ? await geocodeIndonesianLocation(input.cityLocation!)
+    ? await geocodeLocation(
+        jobInput.cityLocation ?? job.cityLocation,
+        jobInput.countryLocation ?? job.countryLocation,
+      )
     : undefined;
 
   return prisma.jobPosting.update({
     where: { id: job.id },
     data: {
-      ...input,
+      ...jobInput,
       ...(locationChanged
         ? {
             latitude: coordinates?.latitude ?? null,
             longitude: coordinates?.longitude ?? null,
           }
         : {}),
-      ...(bannerUrl && { banner: bannerUrl }),
+      ...(removeBanner ? { banner: null } : bannerUrl ? { banner: bannerUrl } : {}),
     },
   });
 };

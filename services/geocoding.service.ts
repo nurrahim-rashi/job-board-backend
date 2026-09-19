@@ -29,11 +29,13 @@ async function observeNominatimRateLimit() {
   release();
 }
 
-export async function geocodeIndonesianLocation(
+export async function geocodeLocation(
   location: string,
+  country = "Indonesia",
 ): Promise<Coordinates | null> {
-  const cacheKey = normalizeLocation(location);
-  if (!cacheKey) return null;
+  const normalizedLocation = normalizeLocation(location);
+  if (!normalizedLocation) return null;
+  const cacheKey = `${country.trim().toLocaleLowerCase("en")}:${normalizedLocation}`;
   if (geocodeCache.has(cacheKey)) return geocodeCache.get(cacheKey) ?? null;
 
   await observeNominatimRateLimit();
@@ -42,9 +44,8 @@ export async function geocodeIndonesianLocation(
 
   try {
     const query = new URLSearchParams({
-      q: `${location}, Indonesia`,
+      q: [location, country].filter(Boolean).join(", "),
       format: "jsonv2",
-      countrycodes: "id",
       limit: "1",
     });
     const response = await fetch(
@@ -75,6 +76,9 @@ export async function geocodeIndonesianLocation(
   }
 }
 
+export const geocodeIndonesianLocation = (location: string) =>
+  geocodeLocation(location, "Indonesia");
+
 async function runActiveJobCoordinateBackfill() {
   const jobs = await prisma.jobPosting.findMany({
     where: {
@@ -83,23 +87,39 @@ async function runActiveJobCoordinateBackfill() {
       deadline: { gte: new Date() },
       OR: [{ latitude: null }, { longitude: null }],
     },
-    select: { cityLocation: true },
+    select: { cityLocation: true, countryLocation: true },
     take: 5,
   });
 
-  const locations = new Map<string, string>();
+  const locations = new Map<
+    string,
+    { cityLocation: string; countryLocation: string }
+  >();
   for (const job of jobs) {
-    const key = normalizeLocation(job.cityLocation);
+    const key = `${job.countryLocation.toLocaleLowerCase("en")}:${normalizeLocation(job.cityLocation)}`;
     if (!key) continue;
-    locations.set(key, job.cityLocation);
+    locations.set(key, {
+      cityLocation: job.cityLocation,
+      countryLocation: job.countryLocation,
+    });
   }
 
   for (const location of locations.values()) {
-    const coordinates = await geocodeIndonesianLocation(location);
+    const coordinates = await geocodeLocation(
+      location.cityLocation,
+      location.countryLocation,
+    );
     if (!coordinates) continue;
     await prisma.jobPosting.updateMany({
       where: {
-        cityLocation: { equals: location, mode: "insensitive" },
+        cityLocation: {
+          equals: location.cityLocation,
+          mode: "insensitive",
+        },
+        countryLocation: {
+          equals: location.countryLocation,
+          mode: "insensitive",
+        },
         OR: [{ latitude: null }, { longitude: null }],
       },
       data: coordinates,

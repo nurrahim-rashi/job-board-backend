@@ -33,11 +33,10 @@ export const registerSchema = z
     role: z.enum(["JOB_SEEKER", "COMPANY_ADMIN"]).default("JOB_SEEKER"),
     companyName: z.string().trim().min(2).max(150).optional(),
     phone: z.string().trim().min(8).max(30).optional(),
-    city: z.string().trim().min(2).max(100).optional(),
   })
   .superRefine((data, context) => {
     if (data.role !== "COMPANY_ADMIN") return;
-    for (const field of ["companyName", "phone", "city"] as const) {
+    for (const field of ["companyName", "phone"] as const) {
       if (!data[field])
         context.addIssue({
           code: "custom",
@@ -100,6 +99,8 @@ export const updateProfileSchema = z.object({
   phone: z.string().trim().min(8).max(30).optional(),
   profileContent: z.string().max(50_000).optional(),
   companyCity: z.string().trim().min(2).max(100).optional(),
+  companyProvince: z.string().trim().max(120).optional(),
+  companyCountry: z.string().trim().min(2).max(120).optional(),
   companyTagline: z.string().trim().max(300).optional(),
   companySize: z.enum([
     "2–10 people",

@@ -84,6 +84,8 @@ export async function getHomepageData(userId: number) {
           slug: true,
           title: true,
           cityLocation: true,
+          provinceLocation: true,
+          countryLocation: true,
           category: true,
           createdAt: true,
           company: { select: { companyName: true } },

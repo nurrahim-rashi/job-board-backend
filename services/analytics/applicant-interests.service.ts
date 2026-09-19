@@ -4,6 +4,7 @@ import {
   buildApplicationWhere,
   getJobApplicationStats,
   mergeLabelCounts,
+  formatLocationLabel,
   percentage,
   roundTo,
 } from "../../utils/analytics.util.js";
@@ -82,10 +83,15 @@ export const getApplicantInterestsService = async (query: AnalyticsQueryInput) =
         companyName: stat.companyName,
         category: stat.category,
         city: stat.city,
+        province: stat.province,
+        country: stat.country,
         applications: stat.applications,
       })),
     cities: mergeLabelCounts(
-      stats.map((stat) => ({ label: stat.city, count: stat.applications })),
+      stats.map((stat) => ({
+        label: formatLocationLabel(stat.city, stat.province, stat.country),
+        count: stat.applications,
+      })),
     )
       .slice(0, limit)
       .map((entry) => ({

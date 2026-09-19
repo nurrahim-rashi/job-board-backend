@@ -5,6 +5,7 @@ import {
   mergeLabelCounts,
   percentage,
   rangeStart,
+  formatLocationLabel,
 } from "../../utils/analytics.util.js";
 import type { AnalyticsQueryInput } from "../../validators/analytics.validator.js";
 
@@ -47,7 +48,7 @@ export const getUserDemographicsService = async (query: AnalyticsQueryInput) => 
         _count: { _all: true },
       }),
       prisma.user.groupBy({
-        by: ["city"],
+        by: ["city", "province"],
         where: userWhere,
         _count: { _all: true },
       }),
@@ -80,12 +81,18 @@ export const getUserDemographicsService = async (query: AnalyticsQueryInput) => 
       return { gender, count, share: percentage(count, total) };
     }),
     cities: takeTop(
-      cityGroups.map((row) => ({ label: row.city, count: row._count._all })),
+      cityGroups.map((row) => ({
+        label: formatLocationLabel(row.city, row.province, "Indonesia"),
+        count: row._count._all,
+      })),
       total,
       limit,
     ),
     provinces: takeTop(
-      provinceGroups.map((row) => ({ label: row.province, count: row._count._all })),
+      provinceGroups.map((row) => ({
+        label: formatLocationLabel(null, row.province, "Indonesia"),
+        count: row._count._all,
+      })),
       total,
       limit,
     ),
