@@ -17,6 +17,7 @@ export async function getPublicSeekerProfile(userId: number, requesterId?: numbe
       lastEducation: true,
       city: true,
       province: true,
+      country: true,
       professionalRole: true,
       availability: true,
       salaryExpectation: true,
@@ -101,7 +102,7 @@ export async function getPublicSeekerProfile(userId: number, requesterId?: numbe
   const reliabilityPenalty = 0;
   const completedAssessments = assessmentResults.length;
   const averageAssessment = completedAssessments ? Math.round(assessmentResults.reduce((sum, result) => sum + result.score, 0) / completedAssessments) : null;
-  const profileFields = [profile.name, profile.emailVerifiedAt, birthDate, gender, profile.lastEducation, address, profile.city, profile.province, profile.avatar, profile.skills.length ? profile.skills : null, profile.experiences, jobApplications.some((application) => application.cvFile) ? true : null];
+  const profileFields = [profile.name, profile.emailVerifiedAt, birthDate, gender, profile.lastEducation, address, profile.city, profile.province, profile.country, profile.avatar, profile.skills.length ? profile.skills : null, profile.experiences, jobApplications.some((application) => application.cvFile) ? true : null];
   const profileCompleteness = Math.round(profileFields.filter(Boolean).length / profileFields.length * 100);
   let assignedStages = 0; let completedStages = 0;
   for (const application of jobApplications) {

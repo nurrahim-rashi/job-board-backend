@@ -25,6 +25,7 @@ const userSelect = {
   address: true,
   city: true,
   province: true,
+  country: true,
   professionalRole: true,
   availability: true,
   profileIntro: true,

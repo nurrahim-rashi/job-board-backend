@@ -62,11 +62,20 @@ type PhotonFeature = {
     osm_id?: number;
     type?: "city" | "county" | "state" | "country";
     name?: string;
+    city?: string;
+    county?: string;
     state?: string;
     country?: string;
     countrycode?: string;
   };
   geometry?: { coordinates?: [number, number] };
+};
+
+export type ReverseGeocodedLocation = {
+  city: string;
+  province: string;
+  country: string;
+  countryCode: string;
 };
 
 let photonQueue: Promise<void> = Promise.resolve();
@@ -192,6 +201,49 @@ export async function searchWorldwideLocations(
   } catch (error) {
     console.error(`Unable to search worldwide locations for "${query}"`, error);
     return [];
+  }
+}
+
+export async function reverseGeocodeCoordinates(
+  latitude: number,
+  longitude: number,
+): Promise<ReverseGeocodedLocation> {
+  try {
+    const params = new URLSearchParams({
+      lat: String(latitude),
+      lon: String(longitude),
+      lang: "en",
+    });
+    const photonBaseUrl = (
+      process.env.PHOTON_API_URL ?? "https://photon.komoot.io"
+    ).replace(/\/$/, "");
+    const response = await fetch(`${photonBaseUrl}/reverse?${params.toString()}`, {
+      signal: AbortSignal.timeout(8_000),
+      headers: {
+        Accept: "application/json",
+        "Accept-Language": "en",
+        "User-Agent": process.env.GEOCODING_USER_AGENT ?? "PolarisJobBoard/1.0",
+      },
+    });
+    if (!response.ok) throw new Error(`Photon returned ${response.status}`);
+    const payload = (await response.json()) as { features?: PhotonFeature[] };
+    const properties = payload.features?.[0]?.properties;
+    const city = (properties?.city ||
+      (properties?.type === "city" ? properties.name : undefined) ||
+      properties?.county || properties?.name)?.trim();
+    const province = properties?.state?.trim();
+    const country = properties?.country?.trim();
+    if (!city || !province || !country)
+      throw new Error("Reverse geocoder returned an incomplete location");
+    return {
+      city,
+      province,
+      country,
+      countryCode: properties?.countrycode?.toUpperCase() ?? "",
+    };
+  } catch (error) {
+    console.error("Unable to reverse geocode coordinates", error);
+    throw new ApiError("Unable to determine your location", 502);
   }
 }
 

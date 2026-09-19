@@ -42,5 +42,6 @@ export interface CvPdfData extends GenerateCvInput {
     email: string;
     city: string | null;
     province: string | null;
+    country: string | null;
   };
 }

@@ -49,18 +49,42 @@ export async function getEducationOptions(
   if (query.trim().length < 2) return filterOptions(fallbackInstitutions, query);
 
   try {
-    const params = new URLSearchParams({ name: query.trim() });
-    if (country?.trim()) params.set("country", country.trim());
-    const response = await fetch(
-      `https://universities.hipolabs.com/search?${params.toString()}`,
+    const openAlexParams = new URLSearchParams({
+      search: query.trim(),
+      "per-page": "15",
+      select: "display_name,country_code,type",
+    });
+    if (process.env.OPENALEX_MAILTO)
+      openAlexParams.set("mailto", process.env.OPENALEX_MAILTO);
+    const openAlexResponse = await fetch(
+      `https://api.openalex.org/institutions?${openAlexParams.toString()}`,
       { signal: AbortSignal.timeout(6_000), headers: { Accept: "application/json" } },
     );
-    if (!response.ok) throw new Error(`University API returned ${response.status}`);
-    const payload = (await response.json()) as Array<{ name?: string }>;
-    return [...new Set(payload.map((item) => item.name?.trim()).filter((name): name is string => Boolean(name)))]
-      .slice(0, 20);
+    if (!openAlexResponse.ok)
+      throw new Error(`OpenAlex returned ${openAlexResponse.status}`);
+    const openAlexPayload = (await openAlexResponse.json()) as {
+      results?: Array<{ display_name?: string }>;
+    };
+    const names = (openAlexPayload.results ?? [])
+      .map((item) => item.display_name?.trim())
+      .filter((name): name is string => Boolean(name));
+    return [...new Set(names)].slice(0, 20);
   } catch (error) {
-    console.warn("University suggestions are temporarily unavailable", error);
-    return filterOptions(fallbackInstitutions, query);
+    console.warn("OpenAlex institution suggestions are unavailable", error);
+    try {
+      const params = new URLSearchParams({ name: query.trim() });
+      if (country?.trim()) params.set("country", country.trim());
+      const response = await fetch(
+        `https://universities.hipolabs.com/search?${params.toString()}`,
+        { signal: AbortSignal.timeout(6_000), headers: { Accept: "application/json" } },
+      );
+      if (!response.ok) throw new Error(`University API returned ${response.status}`);
+      const payload = (await response.json()) as Array<{ name?: string }>;
+      return [...new Set(payload.map((item) => item.name?.trim()).filter((name): name is string => Boolean(name)))]
+        .slice(0, 20);
+    } catch (fallbackError) {
+      console.warn("University fallback suggestions are unavailable", fallbackError);
+      return filterOptions(fallbackInstitutions, query);
+    }
   }
 }

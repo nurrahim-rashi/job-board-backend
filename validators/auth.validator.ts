@@ -74,6 +74,7 @@ export const updateProfileSchema = z.object({
   address: z.string().trim().max(2000).optional(),
   city: z.string().trim().max(100).optional(),
   province: z.string().trim().max(100).optional(),
+  country: z.string().trim().max(120).optional(),
   professionalRole: z.string().trim().max(150).optional(),
   availability: z.enum([
     "Open to Work",

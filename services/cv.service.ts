@@ -19,6 +19,7 @@ export const getCvDataService = async (
       email: true,
       city: true,
       province: true,
+      country: true,
     },
   });
 
@@ -52,7 +53,7 @@ export const generateCvPdfService = (data: CvPdfData): PDFKit.PDFDocument => {
   const contactDetails = [
     data.user.email,
     data.phone,
-    [data.user.city, data.user.province].filter(Boolean).join(", "),
+    [data.user.city, data.user.province, data.user.country].filter(Boolean).join(", "),
   ].filter(Boolean);
 
   doc.font("Helvetica").fontSize(10).text(contactDetails.join(" | "));
