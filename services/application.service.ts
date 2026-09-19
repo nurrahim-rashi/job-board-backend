@@ -56,6 +56,7 @@ export async function createApplication(
       address: true,
       city: true,
       province: true,
+      country: true,
     },
   });
   if (!user || user.role !== "JOB_SEEKER")
@@ -66,6 +67,7 @@ export async function createApplication(
     !user.birthDate ||
     !user.gender ||
     !user.lastEducation ||
+    !user.country ||
     !user.address?.trim() ||
     !user.city?.trim() ||
     !user.province?.trim()

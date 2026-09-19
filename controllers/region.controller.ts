@@ -5,6 +5,7 @@ import {
   getRegions,
   getStateCities,
   searchWorldwideLocations,
+  reverseGeocodeCoordinates,
 } from "../services/region.service.js";
 import { ApiError } from "../utils/api-error.js";
 import { getEducationOptions } from "../services/education.service.js";
@@ -55,4 +56,16 @@ export async function listEducationOptionsController(req: Request, res: Response
   const query = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
   const country = typeof req.query.country === "string" ? req.query.country.trim().slice(0, 120) : undefined;
   res.status(200).json({ data: await getEducationOptions(kind, query, country) });
+}
+
+export async function reverseLocationController(req: Request, res: Response) {
+  const latitude = Number(req.query.latitude);
+  const longitude = Number(req.query.longitude);
+  if (
+    !Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
+    !Number.isFinite(longitude) || longitude < -180 || longitude > 180
+  ) throw new ApiError("Valid latitude and longitude are required", 400);
+  res.status(200).json({
+    data: await reverseGeocodeCoordinates(latitude, longitude),
+  });
 }

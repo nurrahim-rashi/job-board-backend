@@ -23,6 +23,7 @@ export async function getHomepageData(userId: number) {
       address: true,
       city: true,
       province: true,
+      country: true,
       avatar: true,
       role: true,
     },
@@ -42,6 +43,7 @@ export async function getHomepageData(userId: number) {
     user.address,
     user.city,
     user.province,
+    user.country,
     user.avatar,
   ];
   const profileCompletion = Math.round(

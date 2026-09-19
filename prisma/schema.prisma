@@ -90,6 +90,7 @@ model User {
   address                    String?      @db.Text
   city                       String?
   province                   String?
+  country                    String?
   avatar                     String?
   professionalRole           String       @default("")
   availability               String       @default("")
