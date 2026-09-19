@@ -1,8 +1,8 @@
 import type { ErrorRequestHandler } from "express";
 import { ApiError } from "../utils/api-error.js";
 
-export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
-  console.error(error);
+export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
+  console.error(`[${req.method}] ${req.originalUrl}`, error);
   const statusCode = error instanceof ApiError ? error.statusCode : 500;
   const message =
     error instanceof ApiError ? error.message : "Internal server error";

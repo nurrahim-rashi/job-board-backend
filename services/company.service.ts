@@ -47,17 +47,29 @@ function calculateCompanyQuality(
   const responded = applications.filter(
     (application) => application.status !== "PENDING",
   );
-  const responseDays = responded.map((application) =>
-    Math.max(
-      0,
-      (application.updatedAt.getTime() - application.createdAt.getTime()) /
-        86_400_000,
-    ),
-  );
+  const responseHours = responded
+    .map((application) =>
+      Math.max(
+        0,
+        (application.updatedAt.getTime() - application.createdAt.getTime()) /
+          3_600_000,
+      ),
+    )
+    .sort((left, right) => left - right);
+  const responseDays = responseHours.map((hours) => hours / 24);
   const responseRate = applications.length
     ? Math.round((responded.length / applications.length) * 100)
     : null;
-  const medianResponseHours: number | null = null;
+  const responseMiddle = Math.floor(responseHours.length / 2);
+  const medianResponseHours = responseHours.length
+    ? Math.round(
+        responseHours.length % 2
+          ? responseHours[responseMiddle]
+          : (responseHours[responseMiddle - 1] +
+              responseHours[responseMiddle]) /
+              2,
+      )
+    : null;
   const interviews = applications.flatMap((application) =>
     application.interview ? [application.interview] : [],
   );
@@ -294,6 +306,84 @@ function calculateCompanyQuality(
     responseRate,
     hiringConversion,
   };
+}
+
+export async function getPublicCompanyQualityMap(companyIds: number[]) {
+  const ids = [...new Set(companyIds.filter(Number.isInteger))];
+  if (!ids.length) return new Map<number, ReturnType<typeof calculateCompanyQuality>["quality"]>();
+
+  const [companies, applications] = await Promise.all([
+    prisma.company.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        companyName: true,
+        phone: true,
+        city: true,
+        logo: true,
+        profileContent: true,
+        tagline: true,
+        size: true,
+        founded: true,
+        website: true,
+        user: { select: { emailVerifiedAt: true } },
+        reviews: {
+          select: {
+            ratingCulture: true,
+            ratingWorkLife: true,
+            ratingFacility: true,
+            ratingCareer: true,
+          },
+        },
+        jobPostings: {
+          where: {
+            isPublished: true,
+            deletedAt: null,
+            deadline: { gte: new Date() },
+          },
+          select: {
+            salaryMin: true,
+            salaryMax: true,
+            description: true,
+            cityLocation: true,
+            deadline: true,
+            tags: true,
+            banner: true,
+          },
+        },
+      },
+    }),
+    prisma.jobApplication.findMany({
+      where: {
+        status: { not: "DRAFT" },
+        job: { companyId: { in: ids } },
+      },
+      select: {
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        interview: { select: { status: true } },
+        job: { select: { companyId: true } },
+      },
+    }),
+  ]);
+
+  const applicationsByCompany = new Map<number, CompanyQualityApplication[]>();
+  for (const application of applications) {
+    const current = applicationsByCompany.get(application.job.companyId) ?? [];
+    current.push(application);
+    applicationsByCompany.set(application.job.companyId, current);
+  }
+
+  return new Map(
+    companies.map((company) => [
+      company.id,
+      calculateCompanyQuality(
+        company,
+        applicationsByCompany.get(company.id) ?? [],
+      ).quality,
+    ]),
+  );
 }
 
 export async function getPublicCompanies(options: {
