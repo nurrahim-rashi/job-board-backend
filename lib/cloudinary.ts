@@ -29,21 +29,23 @@ const generateSignature = (params: Record<string, string | number>): string => {
 /**
  * Upload image using SIGNED request
  */
-export const uploadImage = async (file: Express.Multer.File) => {
+export const uploadImage = async (
+  file: Express.Multer.File,
+  folder = "job-banners",
+) => {
+  const safeFolder = folder.replace(/[^a-z0-9/_-]/gi, "-");
   if (!cloudName || !apiKey || !apiSecret) {
     const extension = extname(file.originalname).toLowerCase() ||
       (file.mimetype === "image/png" ? ".png" : ".jpg");
-    const uploadPath = join(process.cwd(), "uploads", "job-banners");
+    const uploadPath = join(process.cwd(), "uploads", safeFolder);
     const fileName = `${randomUUID()}${extension}`;
     await mkdir(uploadPath, { recursive: true });
     await writeFile(join(uploadPath, fileName), file.buffer);
-    return { secure_url: `/uploads/job-banners/${fileName}` };
+    return { secure_url: `/uploads/${safeFolder}/${fileName}` };
   }
   const timestamp = Math.floor(Date.now() / 1000);
 
-  const signature = generateSignature({
-    timestamp,
-  });
+  const signature = generateSignature({ folder: safeFolder, timestamp });
 
   const formData = new FormData();
 
@@ -53,6 +55,7 @@ export const uploadImage = async (file: Express.Multer.File) => {
   });
 
   formData.append("api_key", apiKey);
+  formData.append("folder", safeFolder);
   formData.append("timestamp", timestamp.toString());
   formData.append("signature", signature);
 

@@ -1,8 +1,6 @@
 import type { Request, Response } from "express";
-import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { type AuthenticatedRequest } from "../middlewares/auth.middleware.js";
+import { uploadImage } from "../lib/cloudinary.js";
 import { getHomepageData } from "../services/homepage.service.js";
 import {
   changePassword,
@@ -113,13 +111,19 @@ export async function changePasswordController(req: Request, res: Response) {
 export async function uploadAvatarController(req: Request, res: Response) {
   const file = (req as any).file;
   if (!file) {
+    if (!String(req.headers["content-type"] ?? "").startsWith("multipart/form-data")) {
+      return res.status(400).json({ message: "Avatar must be a JPG, JPEG, or PNG image (WEBP is also supported)" });
+    }
     return res.status(400).json({ message: "Avatar file is required" });
   }
 
   if (file.size > 1024 * 1024) {
     return res.status(400).json({ message: "Avatar must be 1MB or smaller" });
   }
-  const avatarUrl = `https://storage.example.com/avatars/${randomUUID()}-${file.originalname}`;
+  if (!/^image\/(jpeg|png|webp)$/.test(file.mimetype)) {
+    return res.status(400).json({ message: "Avatar must be a JPG, JPEG, or PNG image (WEBP is also supported)" });
+  }
+  const avatarUrl = (await uploadImage(file, "avatars")).secure_url;
 
   const user = await updateAvatar(userId(req), avatarUrl);
   return res
@@ -149,8 +153,10 @@ export async function uploadCompanyMediaController(
   if (file.size > 3 * 1024 * 1024) {
     return res.status(400).json({ message: "Image must be 3MB or smaller" });
   }
-
-  const mediaUrl = `https://storage.example.com/companies/${randomUUID()}-${file.originalname}`;
+  if (!/^image\/(jpeg|png|webp)$/.test(file.mimetype)) {
+    return res.status(400).json({ message: "Company media must be a JPG, PNG, or WEBP image" });
+  }
+  const mediaUrl = (await uploadImage(file, `companies/${field}`)).secure_url;
 
   const user = await updateCompanyMedia(userId(req), field, mediaUrl);
   return res

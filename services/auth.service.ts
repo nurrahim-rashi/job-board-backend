@@ -50,6 +50,7 @@ const userSelect = {
       values: true,
       perks: true,
       logo: true,
+      banner: true,
       city: true,
       province: true,
       country: true,

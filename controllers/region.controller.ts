@@ -7,6 +7,7 @@ import {
   searchWorldwideLocations,
 } from "../services/region.service.js";
 import { ApiError } from "../utils/api-error.js";
+import { getEducationOptions } from "../services/education.service.js";
 
 export async function listProvincesController(_req: Request, res: Response) {
   res.status(200).json({ data: await getRegions("provinces.json") });
@@ -45,4 +46,13 @@ export async function searchLocationsController(req: Request, res: Response) {
   if (query.length < 2 || query.length > 80)
     throw new ApiError("Location search must be between 2 and 80 characters", 400);
   res.status(200).json({ data: await searchWorldwideLocations(query) });
+}
+
+export async function listEducationOptionsController(req: Request, res: Response) {
+  const kind = String(req.params.kind);
+  if (kind !== "degrees" && kind !== "majors" && kind !== "institutions")
+    throw new ApiError("Education option type is invalid", 400);
+  const query = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
+  const country = typeof req.query.country === "string" ? req.query.country.trim().slice(0, 120) : undefined;
+  res.status(200).json({ data: await getEducationOptions(kind, query, country) });
 }
