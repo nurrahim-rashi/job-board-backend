@@ -7,6 +7,7 @@ import {
   searchWorldwideLocations,
   reverseGeocodeCoordinates,
 } from "../services/region.service.js";
+import { geocodeLocation } from "../services/geocoding.service.js";
 import { ApiError } from "../utils/api-error.js";
 import { getEducationOptions } from "../services/education.service.js";
 
@@ -68,4 +69,28 @@ export async function reverseLocationController(req: Request, res: Response) {
   res.status(200).json({
     data: await reverseGeocodeCoordinates(latitude, longitude),
   });
+}
+
+export async function geocodeLocationController(req: Request, res: Response) {
+  const city = typeof req.query.city === "string" ? req.query.city.trim() : "";
+  const province =
+    typeof req.query.province === "string" ? req.query.province.trim() : "";
+  const country =
+    typeof req.query.country === "string" ? req.query.country.trim() : "";
+  if (
+    !city ||
+    city.length > 120 ||
+    province.length > 120 ||
+    !country ||
+    country.length > 120
+  )
+    throw new ApiError("Valid city and country are required", 400);
+  const coordinates = await geocodeLocation(
+    city,
+    country,
+    province || undefined,
+  );
+  if (!coordinates)
+    throw new ApiError("Unable to find coordinates for this location", 404);
+  res.status(200).json({ data: coordinates });
 }

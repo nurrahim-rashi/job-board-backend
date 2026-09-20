@@ -31,6 +31,7 @@ export const createJobService = async (
   const coordinates = await geocodeLocation(
     input.cityLocation,
     input.countryLocation,
+    input.provinceLocation,
   );
 
   return prisma.jobPosting.create({
@@ -84,12 +85,15 @@ export const updateJobService = async (
   const bannerUrl = banner ? (await uploadImage(banner)).secure_url : undefined;
   const locationChanged =
     (jobInput.cityLocation !== undefined && jobInput.cityLocation !== job.cityLocation) ||
+    (jobInput.provinceLocation !== undefined &&
+      jobInput.provinceLocation !== job.provinceLocation) ||
     (jobInput.countryLocation !== undefined &&
       jobInput.countryLocation !== job.countryLocation);
   const coordinates = locationChanged
     ? await geocodeLocation(
         jobInput.cityLocation ?? job.cityLocation,
         jobInput.countryLocation ?? job.countryLocation,
+        jobInput.provinceLocation ?? job.provinceLocation,
       )
     : undefined;
 
