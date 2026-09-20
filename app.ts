@@ -20,6 +20,7 @@ import { cvRoutes } from "./routes/cv.routes.js";
 import { profileRoutes } from "./routes/profile.routes.js";
 import { subscriptionRoutes } from "./routes/subscription.routes.js";
 import { regionRoutes } from "./routes/region.routes.js";
+import { isImageStorageConfigured } from "./lib/cloudinary.js";
 
 const app = express();
 
@@ -37,7 +38,10 @@ app.get("/", (_req, res) => {
 });
 
 app.get("/health", (_req, res) => {
-  res.status(200).json({ message: "Polaris API is healthy" });
+  res.status(200).json({
+    message: "Polaris API is healthy",
+    services: { imageStorage: isImageStorageConfigured() ? "configured" : "missing" },
+  });
 });
 
 // entry points

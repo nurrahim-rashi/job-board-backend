@@ -30,8 +30,7 @@ import {
   tokenSchema,
   updateProfileSchema,
 } from "../validators/auth.validator.js";
-import multer from "multer";
-const upload = multer({ storage: multer.memoryStorage() });
+import { upload } from "../middlewares/upload.middleware.js";
 
 export const authRoutes = express.Router();
 const authenticated = verifyToken(process.env.JWT_SECRET!);
@@ -71,14 +70,14 @@ authRoutes.patch(
 authRoutes.put(
   "/avatar",
   authenticated,
-  upload.single("avatar"),
+  upload(3).single("avatar"),
   uploadAvatarController,
 );
 authRoutes.delete("/avatar", authenticated, removeAvatarController);
 authRoutes.put(
   "/company-media/:field",
   authenticated,
-  upload.single("media"),
+  upload(4).single("media"),
   uploadCompanyMediaController,
 );
 authRoutes.delete(

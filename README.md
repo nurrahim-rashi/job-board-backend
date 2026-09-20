@@ -66,9 +66,10 @@ npx prisma generate
 | `EMAIL_FROM` | Production email | Verified Resend sender, such as `Polaris <noreply@example.com>`. |
 | `GEOCODING_USER_AGENT` | Recommended | Identifies Polaris to Nominatim and location providers. Include a contact email. |
 | `PHOTON_API_URL` | No | Worldwide location-search provider; defaults to `https://photon.komoot.io`. |
-| `CLOUDINARY_CLOUD_NAME` | No | Cloudinary account name. Without Cloudinary, job banners are stored locally. |
-| `CLOUDINARY_API_KEY` | No | Cloudinary API key. |
-| `CLOUDINARY_API_SECRET` | No | Cloudinary API secret. |
+| `CLOUDINARY_URL` | Required in production | Standard `cloudinary://API_KEY:API_SECRET@CLOUD_NAME` connection URL. Use this or the three variables below. |
+| `CLOUDINARY_CLOUD_NAME` | Required in production* | Cloudinary account name. Local development falls back to disk. |
+| `CLOUDINARY_API_KEY` | Required in production* | Cloudinary API key. |
+| `CLOUDINARY_API_SECRET` | Required in production* | Cloudinary API secret. |
 | `MIDTRANS_SERVER_KEY` | For payments | Midtrans server key. |
 | `MIDTRANS_CLIENT_KEY` | For payments | Midtrans client key. |
 | `MIDTRANS_IS_PRODUCTION` | No | Use `true` for production; otherwise sandbox mode is used. |
@@ -97,6 +98,7 @@ SUBSCRIPTION_TIMEZONE=Asia/Jakarta
 MIDTRANS_SERVER_KEY=...
 MIDTRANS_CLIENT_KEY=...
 MIDTRANS_IS_PRODUCTION=true
+CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
 CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...

@@ -1,6 +1,6 @@
 import { ApiError } from "../utils/api-error.js";
 
-type EmailInput = { to: string; subject: string; text: string };
+type EmailInput = { to: string; subject: string; text: string; html?: string };
 
 function printEmailPreview(input: EmailInput) {
   console.info(
@@ -39,6 +39,7 @@ export async function sendEmail(input: EmailInput) {
         to: [input.to],
         subject: input.subject,
         text: input.text,
+        ...(input.html ? { html: input.html } : {}),
       }),
     });
   } catch (error) {

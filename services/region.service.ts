@@ -1,4 +1,5 @@
 import { ApiError } from "../utils/api-error.js";
+import { observeNominatimRateLimit } from "./geocoding.service.js";
 
 const baseUrl = "https://wilayah.id/api";
 const countriesNowBaseUrl = "https://countriesnow.space/api/v0.1";

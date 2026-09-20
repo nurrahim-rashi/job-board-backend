@@ -155,12 +155,13 @@ export async function getEducationOptions(
       return [];
     }
   }
-  if (query.trim().length < 2)
-    try {
+  const institutionQuery = query.trim();
+  if (institutionQuery.length < 2) return [];
+  try {
       const openAlexParams = new URLSearchParams({
-        search: query.trim(),
+        search: institutionQuery,
         "per-page": "15",
-        select: "display_name,country_code,type",
+        select: "display_name",
       });
       if (process.env.OPENALEX_MAILTO)
         openAlexParams.set("mailto", process.env.OPENALEX_MAILTO);
@@ -179,11 +180,13 @@ export async function getEducationOptions(
       const names = (openAlexPayload.results ?? [])
         .map((item) => item.display_name?.trim())
         .filter((name): name is string => Boolean(name));
-      return [...new Set(names)].slice(0, 20);
+      const uniqueNames = [...new Set(names)].slice(0, 20);
+      if (uniqueNames.length) return uniqueNames;
+      throw new Error("OpenAlex returned no matching institutions");
     } catch (error) {
       console.warn("OpenAlex institution suggestions are unavailable", error);
       try {
-        const params = new URLSearchParams({ name: query.trim() });
+        const params = new URLSearchParams({ name: institutionQuery });
         if (country?.trim()) params.set("country", country.trim());
         const response = await fetch(
           `https://universities.hipolabs.com/search?${params.toString()}`,
@@ -209,4 +212,5 @@ export async function getEducationOptions(
         );
       }
     }
+  return [];
 }
