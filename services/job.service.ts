@@ -208,9 +208,18 @@ export async function getPublicJobs(options: JobListOptions) {
   const nearbyJobs = jobsWithDistance
     .filter((job) => job.distance !== null && job.distance <= 50);
   if (nearbyJobs.length === 0) {
-    return jobs
-      .map((job) => ({ ...job, distance: null }))
-      .slice(0, options.limit);
+    // Nothing within the radius. Widening to the whole country is the right
+    // fallback, but an explicit "nearest" request must still come back ordered
+    // by distance rather than silently reverting to newest-first.
+    const widened = jobsWithDistance.slice();
+    if (options.sort === "nearest")
+      widened.sort(
+        (first, second) =>
+          (first.distance ?? Number.POSITIVE_INFINITY) -
+            (second.distance ?? Number.POSITIVE_INFINITY) ||
+          second.createdAt.getTime() - first.createdAt.getTime(),
+      );
+    return widened.slice(0, options.limit);
   }
   return (
     options.sort === "nearest"

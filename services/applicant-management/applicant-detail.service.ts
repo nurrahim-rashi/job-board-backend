@@ -1,7 +1,7 @@
 import { Prisma, type JobPosting } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/api-error.js";
-import { calculateAge, resolveCvPath } from "../../utils/applicant.util.js";
+import { calculateAge, resolveCv } from "../../utils/applicant.util.js";
 import { readInterviewProposal } from "../../utils/interview-proposal.util.js";
 
 export const getApplicantDetailService = async (
@@ -96,7 +96,7 @@ export const getApplicantCvService = async (
   }
 
   return {
-    path: resolveCvPath(application.cvFile),
+    source: resolveCv(application.cvFile),
     fileName: `CV-${application.user.name}.pdf`,
   };
 };

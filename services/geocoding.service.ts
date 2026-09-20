@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma.js";
+import { geocodingUserAgent } from "./region.service.js";
 
 export type Coordinates = { latitude: string; longitude: string };
 
@@ -57,7 +58,7 @@ export async function geocodeLocation(
         headers: {
           Accept: "application/json",
           "Accept-Language": "id,en",
-          "User-Agent": process.env.GEOCODING_USER_AGENT ?? "PolarisJobBoard/1.0",
+          "User-Agent": geocodingUserAgent(),
         },
         signal: AbortSignal.timeout(8_000),
       },

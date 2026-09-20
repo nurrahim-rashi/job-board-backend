@@ -155,7 +155,7 @@ function calculateCompanyQuality(
       label: "Application Response Rate",
       value: responseRate,
       score: responseRate,
-      display: responseRate === null ? "—" : `${responseRate}%`,
+      display: responseRate === null ? "N/A" : `${responseRate}%`,
       explanation: "Applications moved beyond Pending.",
     },
     {
@@ -163,7 +163,7 @@ function calculateCompanyQuality(
       label: "Median First Response Time",
       value: medianResponseHours,
       score: responseSpeedScore,
-      display: medianResponseHours === null ? "—" : `${medianResponseHours}h`,
+      display: medianResponseHours === null ? "N/A" : `${medianResponseHours}h`,
       explanation:
         "Median time between an application being submitted and the company's first recorded status action.",
     },
@@ -172,7 +172,7 @@ function calculateCompanyQuality(
       label: "Interview Cancellation Rate",
       value: cancellationRate,
       score: cancellationRate === null ? null : 100 - cancellationRate,
-      display: cancellationRate === null ? "—" : `${cancellationRate}%`,
+      display: cancellationRate === null ? "N/A" : `${cancellationRate}%`,
       explanation:
         "Cancelled interviews divided by all scheduled interviews. This contribution is inverted: 0% cancellation contributes 100 quality points.",
     },
@@ -181,7 +181,7 @@ function calculateCompanyQuality(
       label: "Hiring Conversion Rate",
       value: hiringConversion,
       score: hiringConversion,
-      display: hiringConversion === null ? "—" : `${hiringConversion}%`,
+      display: hiringConversion === null ? "N/A" : `${hiringConversion}%`,
       explanation: "Accepted applicants divided by all valid applications.",
     },
     {
@@ -198,7 +198,7 @@ function calculateCompanyQuality(
       label: "Job Transparency Score",
       value: transparency,
       score: transparency,
-      display: transparency === null ? "—" : `${transparency}%`,
+      display: transparency === null ? "N/A" : `${transparency}%`,
       explanation:
         "Published jobs containing salary, description, location, deadline, tags, and banner.",
     },
@@ -209,7 +209,7 @@ function calculateCompanyQuality(
       score: employeeExperiencePercent,
       display:
         employeeExperiencePercent === null
-          ? "—"
+          ? "N/A"
           : `${employeeExperiencePercent}%`,
       explanation:
         "Average culture, work-life, facility, and career rating, converted to a percentage.",

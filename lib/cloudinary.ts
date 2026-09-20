@@ -173,6 +173,68 @@ export const uploadImage = async (
 };
 
 /**
+ * Applicant CVs are private documents, so they never land in the publicly
+ * served uploads tree. Locally they are written outside `uploads/`; with
+ * Cloudinary configured they go to a `raw` upload whose URL is only ever used
+ * server-side by the guarded download endpoint.
+ */
+export const storeCvDocument = async (file: Express.Multer.File) => {
+  if (file.mimetype !== "application/pdf")
+    throw new ApiError("CV must be a PDF document", 400);
+  if (!file.buffer?.length) throw new ApiError("CV file is empty", 400);
+
+  const { cloudName, apiKey, apiSecret } = cloudinaryConfig();
+  const fileName = `${randomUUID()}.pdf`;
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    if (process.env.NODE_ENV === "production")
+      throw new ApiError(
+        "Document storage is not configured. Set CLOUDINARY_URL or the CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET variables.",
+        503,
+      );
+    const uploadPath = join(process.cwd(), "private-uploads", "cvs");
+    await mkdir(uploadPath, { recursive: true });
+    await writeFile(join(uploadPath, fileName), file.buffer);
+    return `private-uploads/cvs/${fileName}`;
+  }
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const folder = "cvs";
+  const signature = generateSignature({ folder, timestamp }, apiSecret);
+
+  const formData = new FormData();
+  formData.append("file", file.buffer, {
+    filename: fileName,
+    contentType: "application/pdf",
+  });
+  formData.append("api_key", apiKey);
+  formData.append("folder", folder);
+  formData.append("timestamp", timestamp.toString());
+  formData.append("signature", signature);
+
+  try {
+    const response = await axios.post(
+      `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`,
+      formData,
+      { headers: formData.getHeaders(), timeout: 30_000 },
+    );
+    const url = (response.data as { secure_url?: string }).secure_url;
+    if (!url) throw new ApiError("Document upload provider returned no URL", 502);
+    return url;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error(
+        "Cloudinary CV upload failed",
+        error.response?.status,
+        error.response?.data,
+      );
+      throw new ApiError("CV upload failed, please try again", 502);
+    }
+    throw error;
+  }
+};
+
+/**
  * Extract public_id from secure_url
  */
 const extractPublicIdFromUrl = (url: string): string => {

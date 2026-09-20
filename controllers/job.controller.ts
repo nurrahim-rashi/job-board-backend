@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { JobCategory } from "../generated/prisma/client.js";
 import { getPublicJobDetail, getPublicJobs } from "../services/job.service.js";
 import { ApiError } from "../utils/api-error.js";
+import { zonedDateRangeBound } from "../utils/interview.util.js";
 
 function parseCoordinate(value: unknown, name: string) {
   if (value === undefined) return undefined;
@@ -49,11 +50,12 @@ export async function listPublicJobsController(req: Request, res: Response) {
   const sort = ["newest", "oldest", "nearest"].includes(String(req.query.sort))
     ? (req.query.sort as "newest" | "oldest" | "nearest")
     : "newest";
+  const filterTimeZone = process.env.APP_TIMEZONE ?? "Asia/Jakarta";
   const dateFrom = req.query.dateFrom
-    ? new Date(String(req.query.dateFrom))
+    ? zonedDateRangeBound(String(req.query.dateFrom), filterTimeZone, "start")
     : undefined;
   const dateTo = req.query.dateTo
-    ? new Date(`${String(req.query.dateTo)}T23:59:59.999Z`)
+    ? zonedDateRangeBound(String(req.query.dateTo), filterTimeZone, "end")
     : undefined;
   if (
     (dateFrom && Number.isNaN(dateFrom.getTime())) ||

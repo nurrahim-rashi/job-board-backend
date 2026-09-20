@@ -118,10 +118,15 @@ export async function uploadAvatarController(req: Request, res: Response) {
     return res.status(400).json({ message: "Avatar file is required" });
   }
 
-  if (file.size > 3 * 1024 * 1024) {
-    return res.status(400).json({ message: "Avatar must be 3MB or smaller" });
+  if (file.size > 1024 * 1024) {
+    return res.status(400).json({ message: "Avatar must be 1MB or smaller" });
   }
   const checked = verifiedImage(file, "Avatar");
+  if (!["image/jpeg", "image/png"].includes(checked.mimetype)) {
+    return res
+      .status(400)
+      .json({ message: "Avatar must be a JPG, JPEG, or PNG image" });
+  }
   const avatarUrl = (await uploadImage(checked, "avatars")).secure_url;
 
   const user = await updateAvatar(userId(req), avatarUrl);

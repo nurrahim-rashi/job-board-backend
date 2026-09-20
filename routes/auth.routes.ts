@@ -31,26 +31,49 @@ import {
   updateProfileSchema,
 } from "../validators/auth.validator.js";
 import { upload } from "../middlewares/upload.middleware.js";
+import {
+  credentialsLimiter,
+  emailDispatchLimiter,
+  registrationLimiter,
+} from "../middlewares/rate-limit.middleware.js";
 
 export const authRoutes = express.Router();
 const authenticated = verifyToken(process.env.JWT_SECRET!);
 
-authRoutes.post("/register", validate(registerSchema), registerController);
-authRoutes.post("/login", validate(loginSchema), loginController);
-authRoutes.post("/google", validate(googleLoginSchema), googleLoginController);
+authRoutes.post(
+  "/register",
+  registrationLimiter,
+  validate(registerSchema),
+  registerController,
+);
+authRoutes.post(
+  "/login",
+  credentialsLimiter,
+  validate(loginSchema),
+  loginController,
+);
+authRoutes.post(
+  "/google",
+  credentialsLimiter,
+  validate(googleLoginSchema),
+  googleLoginController,
+);
 authRoutes.post("/verify-email", validate(tokenSchema), verifyEmailController);
 authRoutes.post(
   "/resend-verification",
+  emailDispatchLimiter,
   validate(emailSchema),
   resendVerificationController,
 );
 authRoutes.post(
   "/forgot-password",
+  emailDispatchLimiter,
   validate(emailSchema),
   forgotPasswordController,
 );
 authRoutes.post(
   "/reset-password",
+  credentialsLimiter,
   validate(resetPasswordSchema),
   resetPasswordController,
 );
@@ -70,7 +93,7 @@ authRoutes.patch(
 authRoutes.put(
   "/avatar",
   authenticated,
-  upload(3).single("avatar"),
+  upload(1).single("avatar"),
   uploadAvatarController,
 );
 authRoutes.delete("/avatar", authenticated, removeAvatarController);
