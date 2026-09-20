@@ -253,17 +253,18 @@ export async function reverseGeocodeCoordinates(
     const city = (properties?.city ||
       (properties?.type === "city" ? properties.name : undefined) ||
       properties?.county || properties?.name)?.trim();
-    const rawProvince = properties?.state?.trim();
+    const rawProvince =
+      properties?.state?.trim() || properties?.county?.trim() || city;
     const country = properties?.country?.trim();
     const province =
       country?.toLocaleLowerCase("en") === "indonesia"
         ? provinceSearchNames(rawProvince)[1] ?? rawProvince
         : rawProvince;
-    if (!city || !province || !country)
+    if (!city || !country)
       throw new Error("Reverse geocoder returned an incomplete location");
     const location = {
       city,
-      province,
+      province: province ?? city,
       country,
       countryCode: properties?.countrycode?.toUpperCase() ?? "",
     };
@@ -277,7 +278,6 @@ export async function reverseGeocodeCoordinates(
   }
 
   try {
-    await observeNominatimRateLimit();
     const params = new URLSearchParams({
       lat: String(latitude),
       lon: String(longitude),
@@ -305,17 +305,21 @@ export async function reverseGeocodeCoordinates(
       address?.municipality,
       address?.county,
     )[0];
-    const rawProvince = address?.state?.trim() || address?.region?.trim();
     const country = address?.country?.trim();
+    const rawProvince =
+      address?.state?.trim() ||
+      address?.region?.trim() ||
+      address?.county?.trim() ||
+      city;
     const province =
       country?.toLocaleLowerCase("en") === "indonesia"
         ? provinceSearchNames(rawProvince)[1] ?? rawProvince
         : rawProvince;
-    if (!city || !province || !country)
+    if (!city || !country)
       throw new Error("Nominatim returned an incomplete location");
     const location = {
       city,
-      province,
+      province: province ?? city,
       country,
       countryCode: address?.country_code?.toUpperCase() ?? "",
     };
