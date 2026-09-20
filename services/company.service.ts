@@ -404,13 +404,17 @@ export async function getPublicCompanies(options: {
 }) {
   if (options.latitude !== undefined && options.longitude !== undefined) {
     await backfillActiveJobCoordinates();
-    if (!options.country) {
+    if (!options.country || !options.provinceName || !options.city) {
       try {
-        options.country = (
-          await reverseGeocodeCoordinates(options.latitude, options.longitude)
-        ).country;
+        const location = await reverseGeocodeCoordinates(
+          options.latitude,
+          options.longitude,
+        );
+        options.country ||= location.country;
+        options.provinceName ||= location.province;
+        options.city ||= location.city;
       } catch {
-        // The browser also resolves the current country and retries the query.
+        // The browser also resolves the current location and retries the query.
       }
     }
   }
@@ -571,7 +575,7 @@ export async function getPublicCompanies(options: {
         Math.sin(radians(lng - options.longitude!) / 2) ** 2;
     return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
   };
-  const located = companies
+  const companiesWithDistance = companies
     .map((company) => ({
       company,
       distance:
@@ -586,7 +590,18 @@ export async function getPublicCompanies(options: {
           )
           .map((point) => distance(point.lat, point.lng))
           .sort((a, b) => a - b)[0] ?? null,
-    }))
+    }));
+  if (options.city) {
+    return companiesWithDistance
+      .sort((first, second) =>
+        options.sort === "nearest"
+          ? (first.distance ?? Number.POSITIVE_INFINITY) -
+            (second.distance ?? Number.POSITIVE_INFINITY)
+          : 0,
+      )
+      .map(({ company, distance }) => toPublicCompany(company, distance));
+  }
+  const located = companiesWithDistance
     .filter((company) => company.distance !== null && company.distance <= 50)
     .sort((a, b) =>
       options.sort === "nearest" ? a.distance! - b.distance! : 0,

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getStateCities,
+  provinceSearchNames,
   reverseGeocodeCoordinates,
 } from "../services/region.service.js";
 
@@ -9,6 +10,21 @@ afterEach(() => {
 });
 
 describe("reverse geocoding", () => {
+  it("treats Indonesian and English province names as equivalent", () => {
+    expect(provinceSearchNames("Jawa Barat")).toEqual([
+      "Jawa Barat",
+      "west java",
+    ]);
+    expect(provinceSearchNames("West Java")).toEqual([
+      "West Java",
+      "Jawa Barat",
+    ]);
+    expect(provinceSearchNames("Jawa")).toEqual([
+      "Jawa Barat",
+      "west java",
+    ]);
+  });
+
   it("accepts a valid country and city even when the provider omits state", async () => {
     vi.stubGlobal(
       "fetch",

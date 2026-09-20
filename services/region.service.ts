@@ -61,11 +61,26 @@ export function provinceSearchNames(name?: string) {
   if (!name?.trim()) return [];
   const original = name.trim();
   const canonical = normalizeIndonesianProvinceName(original);
+  const canonicalKey = canonical?.toLocaleLowerCase("en");
+  const equivalentAliases = Object.entries(indonesianProvinceAliases)
+    .filter(
+      ([alias, value]) =>
+        alias !== "jawa" &&
+        value.toLocaleLowerCase("en") === canonicalKey,
+    )
+    .map(([alias]) => alias);
+  const seen = new Set<string>();
   return [
-    ...new Set(
-      [original, canonical].filter((value): value is string => Boolean(value)),
-    ),
-  ];
+    original.toLocaleLowerCase("en") === "jawa" ? undefined : original,
+    canonical,
+    ...equivalentAliases,
+  ].filter((value): value is string => {
+    if (!value) return false;
+    const key = value.toLocaleLowerCase("en");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export type Country = { code: string; name: string };
