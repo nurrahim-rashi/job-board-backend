@@ -8,3 +8,7 @@ node_modules
 
 .env.test
 .DS_Store
+.env.example
+.env.test.example
+# Applicant CVs are private documents and must never be committed
+/private-uploads

@@ -1,6 +1,7 @@
 import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../utils/api-error.js";
+import { storeCvDocument } from "../lib/cloudinary.js";
 import { readInterviewProposal } from "../utils/interview-proposal.util.js";
 
 const applicationSelect = {
@@ -103,7 +104,7 @@ export async function createApplication(
     data: {
       jobId: job.id,
       userId,
-      cvFile: `/uploads/cvs/${cvFile.filename}`,
+      cvFile: await storeCvDocument(cvFile),
       expectedSalary,
       expectedSalaryCurrency: job.salaryCurrency,
       lastEducationSnapshot: user.lastEducation,

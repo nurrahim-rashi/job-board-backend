@@ -117,11 +117,11 @@ export async function getPublicSeekerProfile(userId: number, requesterId?: numbe
   const verifiedSkills = new Set(assessmentResults.filter((result) => result.isPassed).map((result) => result.assessment.skillName.toLowerCase()));
   const skillVerification = profile.skills.length ? Math.round(profile.skills.filter((skill) => verifiedSkills.has(skill.toLowerCase())).length / profile.skills.length * 100) : null;
   const qualityMetrics = [
-    { key: "averageAssessment", label: "Average Assessment Score", value: averageAssessment, display: averageAssessment === null ? "—" : `${averageAssessment}%`, explanation: "Average score across completed skill assessments." },
+    { key: "averageAssessment", label: "Average Assessment Score", value: averageAssessment, display: averageAssessment === null ? "N/A" : `${averageAssessment}%`, explanation: "Average score across completed skill assessments." },
     { key: "profileCompleteness", label: "Profile Completeness", value: profileCompleteness, display: `${profileCompleteness}%`, explanation: "Required profile fields and CV that have been completed." },
-    { key: "applicationFollowThrough", label: "Application Follow-through", value: followThrough, display: followThrough === null ? "—" : `${followThrough}%`, explanation: "Assigned application stages that the applicant completed." },
-    { key: "preSelectionCompletion", label: "Pre-selection Completion Rate", value: preSelectionCompletion, display: preSelectionCompletion === null ? "—" : `${preSelectionCompletion}%`, explanation: "Assigned pre-selection tests that were submitted." },
-    { key: "skillVerification", label: "Skill Verification Rate", value: skillVerification, display: skillVerification === null ? "—" : `${skillVerification}%`, explanation: "Profile skills backed by a passed Polaris assessment." },
+    { key: "applicationFollowThrough", label: "Application Follow-through", value: followThrough, display: followThrough === null ? "N/A" : `${followThrough}%`, explanation: "Assigned application stages that the applicant completed." },
+    { key: "preSelectionCompletion", label: "Pre-selection Completion Rate", value: preSelectionCompletion, display: preSelectionCompletion === null ? "N/A" : `${preSelectionCompletion}%`, explanation: "Assigned pre-selection tests that were submitted." },
+    { key: "skillVerification", label: "Skill Verification Rate", value: skillVerification, display: skillVerification === null ? "N/A" : `${skillVerification}%`, explanation: "Profile skills backed by a passed Polaris assessment." },
   ];
   const availableQuality = qualityMetrics.filter((metric) => metric.value !== null);
   const qualityScore = Math.min(100, Math.max(0, Math.round(availableQuality.reduce((sum, metric) => sum + metric.value!, 0) / availableQuality.length)));

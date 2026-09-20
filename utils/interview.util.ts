@@ -42,3 +42,23 @@ export const zonedDayStart = (
 
   return new Date(wallClock - zoneOffsetMs(firstPass, timeZone));
 };
+
+/**
+ * A "YYYY-MM-DD" filter means that calendar day where the user is, not in UTC.
+ * Parsing it as UTC shifts the boundary by the zone offset, which in WIB
+ * (UTC+7) pulls in postings made early the following morning.
+ */
+export const zonedDateRangeBound = (
+  isoDate: string,
+  timeZone: string,
+  edge: "start" | "end",
+): Date => {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  if (!year || !month || !day) return new Date(Number.NaN);
+
+  const midnightUtc = new Date(Date.UTC(year, month - 1, day));
+  const start = zonedDayStart(midnightUtc, timeZone, 0);
+  if (edge === "start") return start;
+
+  return new Date(zonedDayStart(midnightUtc, timeZone, 1).getTime() - 1);
+};

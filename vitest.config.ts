@@ -11,5 +11,9 @@ export default defineConfig({
     environment: "node",
     testTimeout: 15000,
     fileParallelism: false,
+    // `npm run build` compiles the suite into dist/, where vitest would collect
+    // the stale copies alongside the sources and run every integration test
+    // twice against older code.
+    exclude: ["**/node_modules/**", "dist/**", "generated/**"],
   },
 });

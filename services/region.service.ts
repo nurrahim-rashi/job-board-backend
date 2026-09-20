@@ -112,6 +112,27 @@ type PhotonFeature = {
   geometry?: { coordinates?: [number, number] };
 };
 
+type NominatimSearchResult = {
+  osm_type?: string;
+  osm_id?: number;
+  name?: string;
+  display_name?: string;
+  addresstype?: string;
+  lat?: string;
+  lon?: string;
+  address?: {
+    city?: string;
+    town?: string;
+    village?: string;
+    municipality?: string;
+    county?: string;
+    state?: string;
+    region?: string;
+    country?: string;
+    country_code?: string;
+  };
+};
+
 type NominatimReverseResult = {
   address?: {
     city?: string;
@@ -146,6 +167,24 @@ export type ReverseGeocodedLocation = {
   country: string;
   countryCode: string;
 };
+
+const PRODUCT_USER_AGENT = "PolarisJobBoard/1.0";
+
+// OSM's Nominatim answers 403 to a User-Agent whose contact is an obvious
+// placeholder, which silently kills every geocoding fallback. Send the plain
+// product string instead of a fake address until a real contact is configured.
+const PLACEHOLDER_CONTACT =
+  /(example\.(com|org|net)|your[-_.]?contact|your[-_.]?email|changeme|todo|xxx+)/i;
+
+export function geocodingUserAgent() {
+  const configured = process.env.GEOCODING_USER_AGENT?.trim();
+  if (!configured) return PRODUCT_USER_AGENT;
+  if (PLACEHOLDER_CONTACT.test(configured)) {
+    const withoutContact = configured.replace(/\s*\([^)]*\)\s*/g, " ").trim();
+    return withoutContact || PRODUCT_USER_AGENT;
+  }
+  return configured;
+}
 
 let photonQueue: Promise<void> = Promise.resolve();
 let lastPhotonRequestAt = 0;
@@ -194,6 +233,22 @@ export async function searchWorldwideLocations(
   if (queuedCache && queuedCache.expiresAt > Date.now())
     return queuedCache.data as WorldwideLocation[];
 
+  let locations = await searchLocationsWithPhoton(query);
+  if (!locations.length) locations = await searchLocationsWithNominatim(query);
+
+  // Only cache a real answer. Caching an empty list would pin a transient
+  // upstream outage in place for a full day.
+  if (locations.length)
+    cache.set(cacheKey, {
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      data: locations,
+    });
+  return locations;
+}
+
+async function searchLocationsWithPhoton(
+  query: string,
+): Promise<WorldwideLocation[]> {
   try {
     const params = new URLSearchParams({ q: query, limit: "12", lang: "en" });
     for (const layer of ["city", "county", "state", "country"])
@@ -208,14 +263,14 @@ export async function searchWorldwideLocations(
         Accept: "application/json",
         "Accept-Language": "en",
         "User-Agent":
-          process.env.GEOCODING_USER_AGENT ?? "PolarisJobBoard/1.0",
+          geocodingUserAgent(),
       },
     });
     if (!response.ok) throw new Error(`Photon returned ${response.status}`);
 
     const payload = (await response.json()) as { features?: PhotonFeature[] };
     const seen = new Set<string>();
-    const locations = (payload.features ?? [])
+    return (payload.features ?? [])
       .map((feature): WorldwideLocation | null => {
         const properties = feature.properties;
         const coordinates = feature.geometry?.coordinates;
@@ -261,14 +316,109 @@ export async function searchWorldwideLocations(
       })
       .filter((location): location is WorldwideLocation => location !== null)
       .slice(0, 8);
-
-    cache.set(cacheKey, {
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      data: locations,
-    });
-    return locations;
   } catch (error) {
-    console.error(`Unable to search worldwide locations for "${query}"`, error);
+    console.error(`Photon location search failed for "${query}"`, error);
+    return [];
+  }
+}
+
+// Photon is unreachable from some hosts (the deployed API gets nothing back),
+// so fall back to the same Nominatim service the reverse geocoder already uses.
+async function searchLocationsWithNominatim(
+  query: string,
+): Promise<WorldwideLocation[]> {
+  try {
+    const params = new URLSearchParams({
+      q: query,
+      format: "jsonv2",
+      addressdetails: "1",
+      limit: "12",
+    });
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+      {
+        signal: AbortSignal.timeout(8_000),
+        headers: {
+          Accept: "application/json",
+          "Accept-Language": "en",
+          "User-Agent":
+            geocodingUserAgent(),
+        },
+      },
+    );
+    if (!response.ok) throw new Error(`Nominatim returned ${response.status}`);
+
+    const payload = (await response.json()) as NominatimSearchResult[];
+    const seen = new Set<string>();
+    return (Array.isArray(payload) ? payload : [])
+      .map((result): WorldwideLocation | null => {
+        const address = result.address;
+        const country = address?.country?.trim();
+        const latitude = Number(result.lat);
+        const longitude = Number(result.lon);
+        const addressType = result.addresstype ?? "";
+        if (
+          !country ||
+          !Number.isFinite(latitude) ||
+          !Number.isFinite(longitude)
+        )
+          return null;
+
+        const type: WorldwideLocation["type"] =
+          addressType === "country"
+            ? "country"
+            : addressType === "state" || addressType === "province"
+              ? "state"
+              : "city";
+        const name = (
+          result.name?.trim() ||
+          uniqueParts(
+            address?.city,
+            address?.town,
+            address?.village,
+            address?.municipality,
+            address?.county,
+            address?.state,
+            country,
+          )[0]
+        )?.trim();
+        if (!name) return null;
+
+        // Nominatim has no dedicated layer filter, so a query can come back
+        // with roads or venues. Keep only administrative places.
+        if (
+          type === "city" &&
+          !["city", "town", "village", "municipality", "county", "suburb"].includes(
+            addressType,
+          )
+        )
+          return null;
+
+        const label = uniqueParts(
+          name,
+          type === "city" ? address?.state : undefined,
+          country,
+        ).join(", ");
+        const dedupeKey = `${type}:${label.toLocaleLowerCase("en")}`;
+        if (seen.has(dedupeKey)) return null;
+        seen.add(dedupeKey);
+
+        return {
+          id: `${result.osm_type ?? "place"}-${result.osm_id ?? dedupeKey}`,
+          name,
+          label,
+          type,
+          province: address?.state?.trim() || null,
+          country,
+          countryCode: address?.country_code?.toUpperCase() ?? "",
+          latitude,
+          longitude,
+        };
+      })
+      .filter((location): location is WorldwideLocation => location !== null)
+      .slice(0, 8);
+  } catch (error) {
+    console.error(`Nominatim location search failed for "${query}"`, error);
     return [];
   }
 }
@@ -298,7 +448,7 @@ export async function reverseGeocodeCoordinates(
       headers: {
         Accept: "application/json",
         "Accept-Language": "en",
-        "User-Agent": process.env.GEOCODING_USER_AGENT ?? "PolarisJobBoard/1.0",
+        "User-Agent": geocodingUserAgent(),
       },
     });
     if (!response.ok) throw new Error(`Photon returned ${response.status}`);
@@ -350,7 +500,7 @@ export async function reverseGeocodeCoordinates(
         headers: {
           Accept: "application/json",
           "Accept-Language": "en,id",
-          "User-Agent": process.env.GEOCODING_USER_AGENT ?? "PolarisJobBoard/1.0",
+          "User-Agent": geocodingUserAgent(),
         },
       },
     );
@@ -411,7 +561,7 @@ export async function reverseGeocodeCoordinates(
           headers: {
             Accept: "application/json",
             "User-Agent":
-              process.env.GEOCODING_USER_AGENT ?? "PolarisJobBoard/1.0",
+              geocodingUserAgent(),
           },
         },
       );

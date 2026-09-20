@@ -6,6 +6,8 @@ import {
 } from "../services/applicant-management/applicant-detail.service.js";
 import { getApplicantListService } from "../services/applicant-management/applicant-list.service.js";
 import { updateApplicantStatusService } from "../services/applicant-management/applicant-status.service.js";
+import axios from "axios";
+import type { Readable } from "node:stream";
 import { ApiError } from "../utils/api-error.js";
 import {
   applicantQuerySchema,
@@ -72,11 +74,21 @@ export const getApplicantCvController = async (
       "Content-Disposition",
       `inline; filename="${cv.fileName}"`,
     );
-    res.sendFile(cv.path, (error) => {
-      if (error) {
-        next(error);
-      }
+
+    if (cv.source.kind === "file") {
+      res.sendFile(cv.source.path, (error) => {
+        if (error) next(error);
+      });
+      return;
+    }
+
+    // The stored provider URL stays on the server; only the bytes are relayed,
+    // and only to a caller that already passed the job-owner check.
+    const document = await axios.get<Readable>(cv.source.url, {
+      responseType: "stream",
+      timeout: 30_000,
     });
+    document.data.pipe(res);
   } catch (error) {
     next(error);
   }

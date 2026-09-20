@@ -42,12 +42,28 @@ export const buildBirthDateFilter = (minAge?: number, maxAge?: number) => {
   };
 };
 
-export const resolveCvPath = (cvFile: string): string => {
-  const filePath = path.resolve(CV_DIRECTORY, path.basename(cvFile));
+const PRIVATE_CV_DIRECTORY = "private-uploads/cvs";
 
-  if (!fs.existsSync(filePath)) {
-    throw new ApiError("CV document is no longer available", 404);
+export type ResolvedCv =
+  | { kind: "file"; path: string }
+  | { kind: "remote"; url: string };
+
+/**
+ * A stored CV is one of three things: a provider URL, a file in the private
+ * directory, or a legacy file from when CVs were written into the public
+ * uploads tree. basename() keeps a crafted value from escaping either folder.
+ */
+export const resolveCv = (cvFile: string | null): ResolvedCv => {
+  const stored = cvFile?.trim();
+  if (!stored) throw new ApiError("CV document is no longer available", 404);
+
+  if (/^https?:\/\//i.test(stored)) return { kind: "remote", url: stored };
+
+  const fileName = path.basename(stored);
+  for (const directory of [PRIVATE_CV_DIRECTORY, CV_DIRECTORY]) {
+    const filePath = path.resolve(directory, fileName);
+    if (fs.existsSync(filePath)) return { kind: "file", path: filePath };
   }
 
-  return filePath;
+  throw new ApiError("CV document is no longer available", 404);
 };

@@ -43,6 +43,8 @@ npm run dev
 
 The API listens on `http://localhost:8000` unless `PORT` is changed. The subscription seed is required for Polaris Plus and Polaris Pro to appear on the pricing page.
 
+Keep `NODE_ENV` unset or `development` in a local `.env`. `http://localhost:5173` is only added to the CORS allow-list outside production, so a local `.env` carrying `NODE_ENV=production` makes the browser block every request from the local frontend, which looks like a broken feature rather than a CORS failure.
+
 When pulling new changes that contain migrations, run:
 
 ```bash
@@ -64,7 +66,7 @@ npx prisma generate
 | `GOOGLE_CLIENT_ID` | For Google Sign-In | OAuth Web Client ID; must match the frontend value. |
 | `RESEND_API_KEY` | Production email | Resend API key. Missing local credentials fall back to console previews. |
 | `EMAIL_FROM` | Production email | Verified Resend sender, such as `Polaris <noreply@example.com>`. |
-| `GEOCODING_USER_AGENT` | Recommended | Identifies Polaris to Nominatim and location providers. Include a contact email. |
+| `GEOCODING_USER_AGENT` | Recommended | Identifies Polaris to Nominatim and location providers. It must carry a **real** contact address: OSM rejects a placeholder contact with HTTP 403, which silently disables every geocoding fallback. A value that looks like a placeholder is stripped back to the bare product string before the request is sent. |
 | `PHOTON_API_URL` | No | Worldwide location-search provider; defaults to `https://photon.komoot.io`. |
 | `CLOUDINARY_URL` | Required in production | Standard `cloudinary://API_KEY:API_SECRET@CLOUD_NAME` connection URL. Use this or the three variables below. |
 | `CLOUDINARY_CLOUD_NAME` | Required in production* | Cloudinary account name. Local development falls back to disk. |
@@ -163,6 +165,7 @@ Authorization: Bearer <access-token>
 | `/companies` | Public company directory and company details. |
 | `/profiles` | Public applicant/company-admin profiles and quality data. |
 | `/regions` | Countries, states, cities, Indonesian regions, and worldwide search. |
+| `/exchange-rates` | Daily foreign-exchange table used by the job-detail salary converter. |
 | `/assessment` | Skill discovery, attempts, results, badges, certificates, and developer management. |
 | `/subscriptions` | Public plans, purchases, payment notifications, and developer management. |
 | `/reviews` | Company reviews and aggregated Stories data. |
@@ -189,6 +192,7 @@ Authorization: Bearer <access-token>
 | `GET` | `/job-posting/:slug/applicants` | Owning company admin |
 | `POST` | `/job-posting/:slug/interviews` | Owning company admin |
 | `GET` | `/regions/search?q=Bandung` | Public |
+| `GET` | `/exchange-rates?base=USD` | Public |
 | `GET` | `/reviews/stories` | Public |
 | `POST` | `/reviews/:companyId` | Authenticated eligible reviewer |
 | `GET` | `/assessment/certificates/verify/:certificateCode` | Public |
@@ -201,10 +205,25 @@ The API acts as the frontend's location gateway:
 
 - `wilayah.id` supplies Indonesian provinces and regencies.
 - Photon supplies worldwide city/state/country type-to-search.
+- Nominatim backs Photon up for both forward search and reverse geocoding.
 - CountriesNow supplies country/state/city lists with a fallback country provider.
 - Nominatim geocodes job locations for nearest-job sorting.
 
 Responses are cached in memory and provider calls are rate-limited. Published jobs without coordinates are backfilled in small batches when location-aware searches run.
+
+`GET /regions/search` tries Photon first and falls back to Nominatim when Photon errors or returns nothing. Empty results are never cached, so one upstream outage cannot pin an empty list in place for a day. If the endpoint answers `200` with an empty `data` array for an obviously valid query such as `Jakarta`, both providers were unreachable from the host: check outbound network access and `GEOCODING_USER_AGENT` before looking at the query.
+
+## Currency Conversion
+
+`GET /exchange-rates?base=USD` returns `{ base, rates, fetchedAt }`, where `rates` maps a currency code to the amount of that currency per one unit of `base`. The job-detail salary converter fetches this once per job and converts locally, so changing the target currency costs no further requests.
+
+- Primary provider: `open.er-api.com` (no key, ~166 currencies).
+- Fallback provider: `api.frankfurter.dev` (ECB, ~30 major currencies).
+- The USD table is cached in memory for an hour, concurrent requests share one upstream call, and a stale table is served rather than failing when both providers are down.
+
+Rates are always fetched against USD and cross-divided to the requested base. Asking an upstream for a weak base directly returns too few significant digits to convert a salary with: `1 IDR = 0.000056 USD` loses roughly four digits of precision compared with dividing into the USD table.
+
+An unknown currency code returns `404`; a malformed one returns `400`.
 
 ## Uploads
 
@@ -252,17 +271,28 @@ The generated diagram is stored at [`docs/erd.svg`](./docs/erd.svg).
 
 ## Testing
 
-Create `.env.test` with a dedicated disposable database:
+Copy `.env.test.example` to `.env.test` and point it at a dedicated disposable database:
 
 ```env
 DATABASE_URL_TEST=postgresql://user:password@localhost:5432/polaris_test
 JWT_SECRET_TEST=replace-with-a-test-secret
+NODE_ENV=test
+RESEND_API_KEY=
+EMAIL_FROM=
 ```
 
-Then run:
+The last three lines matter. `lib/prisma.ts` and `app.ts` both call `import "dotenv/config"`, so `.env` is loaded inside the test run as well, and dotenv never overwrites a variable that is already set. Without those overrides a live `RESEND_API_KEY` in `.env` would make the registration and verification tests post real mail to Resend.
+
+Then create the database and run the suite:
 
 ```bash
+createdb polaris_test
+DATABASE_URL="$DATABASE_URL_TEST" npx prisma migrate deploy
 npm run test:run
 ```
 
+`vitest.config.ts` excludes `dist/`. Without that exclusion a previous `npm run build` leaves a compiled copy of every test behind and vitest runs the whole integration suite twice, once against stale code.
+
 Never point `DATABASE_URL_TEST` at development or production data.
+
+`vitest.config.ts` copies `DATABASE_URL_TEST` into `DATABASE_URL` before the suite boots. If `.env.test` is missing or empty, every integration test fails with a Prisma `Invalid URL` error; the unit tests that do not touch the database still pass, which makes the cause easy to misread.

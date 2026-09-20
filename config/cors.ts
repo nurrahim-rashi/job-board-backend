@@ -1,3 +1,5 @@
+import { ApiError } from "../utils/api-error.js";
+
 const configuredFrontendUrl = process.env.FRONTEND_URL?.replace(/\/$/, "");
 const allowedOrigins = new Set(
   [
@@ -17,7 +19,10 @@ export const corsOptions = {
       return;
     }
 
-    callback(new Error(`Origin ${origin} is not allowed by CORS`));
+    // A plain Error here reaches the error handler as an unknown failure and
+    // answers 500, which reads like the API is down rather than like the
+    // origin being refused.
+    callback(new ApiError(`Origin ${origin} is not allowed by CORS`, 403));
   },
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"],
