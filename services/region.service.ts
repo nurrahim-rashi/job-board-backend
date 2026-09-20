@@ -6,6 +6,7 @@ const countriesNowBaseUrl = "https://countriesnow.space/api/v0.1";
 const cache = new Map<string, { expiresAt: number; data: unknown }>();
 
 const indonesianProvinceAliases: Record<string, string> = {
+  jawa: "Jawa Barat",
   "north sumatra": "Sumatera Utara",
   "west sumatra": "Sumatera Barat",
   "south sumatra": "Sumatera Selatan",
@@ -36,11 +37,35 @@ const indonesianProvinceAliases: Record<string, string> = {
   "jakarta special capital region": "DKI Jakarta",
 };
 
+const indonesianCityAliases: Record<string, string> = {
+  "bandung barat": "Kabupaten Bandung Barat",
+  "west bandung": "Kabupaten Bandung Barat",
+  "west bandung regency": "Kabupaten Bandung Barat",
+};
+
+function normalizeIndonesianProvinceName(name?: string) {
+  const original = name?.trim();
+  if (!original) return undefined;
+  return (
+    indonesianProvinceAliases[original.toLocaleLowerCase("en")] ?? original
+  );
+}
+
+function normalizeIndonesianCityName(name?: string) {
+  const original = name?.trim();
+  if (!original) return undefined;
+  return indonesianCityAliases[original.toLocaleLowerCase("en")] ?? original;
+}
+
 export function provinceSearchNames(name?: string) {
   if (!name?.trim()) return [];
   const original = name.trim();
-  const alias = indonesianProvinceAliases[original.toLocaleLowerCase("en")];
-  return [...new Set([original, alias].filter((value): value is string => Boolean(value)))];
+  const canonical = normalizeIndonesianProvinceName(original);
+  return [
+    ...new Set(
+      [original, canonical].filter((value): value is string => Boolean(value)),
+    ),
+  ];
 }
 
 export type Country = { code: string; name: string };
@@ -83,6 +108,20 @@ type NominatimReverseResult = {
     region?: string;
     country?: string;
     country_code?: string;
+  };
+};
+
+type BigDataCloudReverseResult = {
+  city?: string;
+  locality?: string;
+  principalSubdivision?: string;
+  countryName?: string;
+  countryCode?: string;
+  localityInfo?: {
+    administrative?: Array<{
+      name?: string;
+      description?: string;
+    }>;
   };
 };
 
@@ -250,15 +289,19 @@ export async function reverseGeocodeCoordinates(
     if (!response.ok) throw new Error(`Photon returned ${response.status}`);
     const payload = (await response.json()) as { features?: PhotonFeature[] };
     const properties = payload.features?.[0]?.properties;
-    const city = (properties?.city ||
+    const localCity = (properties?.city ||
       (properties?.type === "city" ? properties.name : undefined) ||
       properties?.county || properties?.name)?.trim();
+    const country = properties?.country?.trim();
+    const isIndonesia = country?.toLocaleLowerCase("en") === "indonesia";
+    const city = isIndonesia
+      ? normalizeIndonesianCityName(properties?.county || localCity)
+      : localCity;
     const rawProvince =
       properties?.state?.trim() || properties?.county?.trim() || city;
-    const country = properties?.country?.trim();
     const province =
-      country?.toLocaleLowerCase("en") === "indonesia"
-        ? provinceSearchNames(rawProvince)[1] ?? rawProvince
+      isIndonesia
+        ? normalizeIndonesianProvinceName(rawProvince)
         : rawProvince;
     if (!city || !country)
       throw new Error("Reverse geocoder returned an incomplete location");
@@ -298,22 +341,33 @@ export async function reverseGeocodeCoordinates(
     );
     if (!response.ok) throw new Error(`Nominatim returned ${response.status}`);
     const address = ((await response.json()) as NominatimReverseResult).address;
-    const city = uniqueParts(
-      address?.city,
-      address?.town,
-      address?.village,
-      address?.municipality,
-      address?.county,
-    )[0];
     const country = address?.country?.trim();
+    const isIndonesia = country?.toLocaleLowerCase("en") === "indonesia";
+    const city = isIndonesia
+      ? normalizeIndonesianCityName(
+          uniqueParts(
+            address?.county,
+            address?.municipality,
+            address?.city,
+            address?.town,
+            address?.village,
+          )[0],
+        )
+      : uniqueParts(
+          address?.city,
+          address?.town,
+          address?.village,
+          address?.municipality,
+          address?.county,
+        )[0];
     const rawProvince =
       address?.state?.trim() ||
       address?.region?.trim() ||
       address?.county?.trim() ||
       city;
     const province =
-      country?.toLocaleLowerCase("en") === "indonesia"
-        ? provinceSearchNames(rawProvince)[1] ?? rawProvince
+      isIndonesia
+        ? normalizeIndonesianProvinceName(rawProvince)
         : rawProvince;
     if (!city || !country)
       throw new Error("Nominatim returned an incomplete location");
@@ -329,11 +383,66 @@ export async function reverseGeocodeCoordinates(
     });
     return location;
   } catch (nominatimError) {
-    console.error("Unable to reverse geocode coordinates", {
-      photonError,
-      nominatimError,
-    });
-    throw new ApiError("Unable to determine your location", 502);
+    try {
+      const params = new URLSearchParams({
+        latitude: String(latitude),
+        longitude: String(longitude),
+        localityLanguage: "en",
+      });
+      const response = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?${params.toString()}`,
+        {
+          signal: AbortSignal.timeout(8_000),
+          headers: {
+            Accept: "application/json",
+            "User-Agent":
+              process.env.GEOCODING_USER_AGENT ?? "PolarisJobBoard/1.0",
+          },
+        },
+      );
+      if (!response.ok)
+        throw new Error(`BigDataCloud returned ${response.status}`);
+
+      const payload = (await response.json()) as BigDataCloudReverseResult;
+      const country = payload.countryName?.trim();
+      const isIndonesia = country?.toLocaleLowerCase("en") === "indonesia";
+      const administrativeCity = payload.localityInfo?.administrative?.find(
+        (entry) =>
+          entry.name &&
+          /regency|city|municipality|kabupaten|kota/i.test(
+            `${entry.description ?? ""} ${entry.name}`,
+          ),
+      )?.name;
+      const cityCandidate =
+        administrativeCity || payload.city || payload.locality;
+      const city = isIndonesia
+        ? normalizeIndonesianCityName(cityCandidate)
+        : cityCandidate?.trim();
+      const province = isIndonesia
+        ? normalizeIndonesianProvinceName(payload.principalSubdivision)
+        : payload.principalSubdivision?.trim();
+      if (!city || !province || !country)
+        throw new Error("BigDataCloud returned an incomplete location");
+
+      const location = {
+        city,
+        province,
+        country,
+        countryCode: payload.countryCode?.toUpperCase() ?? "",
+      };
+      cache.set(cacheKey, {
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+        data: location,
+      });
+      return location;
+    } catch (bigDataCloudError) {
+      console.error("Unable to reverse geocode coordinates", {
+        photonError,
+        nominatimError,
+        bigDataCloudError,
+      });
+      throw new ApiError("Unable to determine your location", 502);
+    }
   }
 }
 
@@ -444,10 +553,52 @@ export async function getStateCities(
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.data as Country[];
 
+  if (normalizedCountry.toLocaleLowerCase("en") === "indonesia") {
+    const canonicalState = normalizeIndonesianProvinceName(normalizedState)!;
+    try {
+      const provinces = (await getRegions("provinces.json")) as Array<{
+        code?: string;
+        name?: string;
+      }>;
+      const province = provinces.find(
+        (item) =>
+          item.name?.trim().toLocaleLowerCase("en") ===
+          canonicalState.toLocaleLowerCase("en"),
+      );
+      if (!province?.code)
+        throw new Error(`Unknown Indonesian province: ${normalizedState}`);
+
+      const regencies = (await getRegions(
+        `regencies/${province.code}.json`,
+      )) as Array<{ code?: string; name?: string }>;
+      const cities = regencies
+        .filter(
+          (regency): regency is { code: string; name: string } =>
+            Boolean(regency.code && regency.name),
+        )
+        .map((regency) => ({ code: regency.code, name: regency.name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      cache.set(cacheKey, {
+        expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        data: cities,
+      });
+      return cities;
+    } catch (error) {
+      console.warn(
+        `Unable to load Indonesian cities for ${canonicalState} from Wilayah.id`,
+        error,
+      );
+    }
+  }
+
   try {
+    const providerState =
+      normalizedCountry.toLocaleLowerCase("en") === "indonesia"
+        ? normalizeIndonesianProvinceName(normalizedState)!
+        : normalizedState;
     const params = new URLSearchParams({
       country: normalizedCountry,
-      state: normalizedState,
+      state: providerState,
     });
     const response = await fetch(
       `${countriesNowBaseUrl}/countries/state/cities/q?${params.toString()}`,
