@@ -83,6 +83,7 @@ describe("Job applications", () => {
       address: "Jalan Polaris 1",
       city: "Jakarta",
       province: "Jakarta",
+      country: "Indonesia",
     });
     const { company } = await createTestCompany("Application");
     const job = await createTestJob(company.id, "Application Flow", {
@@ -156,6 +157,7 @@ describe("Job applications", () => {
       address: "Jalan Polaris 2",
       city: "Jakarta",
       province: "Jakarta",
+      country: "Indonesia",
     });
     const { company } = await createTestCompany("Rejection");
     const job = await createTestJob(company.id, "Rejection Flow");
