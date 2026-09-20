@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { reverseGeocodeCoordinates } from "../services/region.service.js";
+import {
+  getStateCities,
+  reverseGeocodeCoordinates,
+} from "../services/region.service.js";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -65,19 +68,20 @@ describe("reverse geocoding", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("uses Indonesian regency and province instead of a district", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
+  it("uses the Indonesian regency instead of a district as the city", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
         new Response(
           JSON.stringify({
             features: [
               {
                 properties: {
                   type: "city",
+                  name: "Padalarang",
                   city: "Padalarang",
-                  county: "Kabupaten Bandung Barat",
-                  state: "Java",
+                  county: "West Bandung Regency",
+                  state: "West Java",
                   country: "Indonesia",
                   countrycode: "ID",
                 },
@@ -86,28 +90,53 @@ describe("reverse geocoding", () => {
           }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
+      ),
+    );
+
+    await expect(
+      reverseGeocodeCoordinates(-6.8738, 107.4694),
+    ).resolves.toEqual({
+      city: "Kabupaten Bandung Barat",
+      province: "Jawa Barat",
+      country: "Indonesia",
+      countryCode: "ID",
+    });
+  });
+
+  it("maps Jawa to Jawa Barat and loads Indonesian regencies locally", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [
+              { code: "31", name: "DKI Jakarta" },
+              { code: "32", name: "Jawa Barat" },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
       )
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            address: {
-              town: "Padalarang",
-              county: "Kabupaten Bandung Barat",
-              state: "Jawa Barat",
-              country: "Indonesia",
-              country_code: "id",
-            },
+            data: [
+              { code: "32.73", name: "Kota Bandung" },
+              { code: "32.17", name: "Kabupaten Bandung Barat" },
+            ],
           }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
       );
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(reverseGeocodeCoordinates(-6.84, 107.47)).resolves.toEqual({
-      city: "Kabupaten Bandung Barat",
-      province: "Jawa Barat",
-      country: "Indonesia",
-      countryCode: "ID",
-    });
+    await expect(getStateCities("Indonesia", "Jawa")).resolves.toEqual([
+      { code: "32.17", name: "Kabupaten Bandung Barat" },
+      { code: "32.73", name: "Kota Bandung" },
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[1]?.[0])).toContain(
+      "/regencies/32.json",
+    );
   });
 });
