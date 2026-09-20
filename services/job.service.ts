@@ -157,7 +157,7 @@ export async function getPublicJobs(options: JobListOptions) {
         options.provinceName ||= location.province;
         options.city ||= location.city;
       } catch {
-        // The browser also resolves the current country and retries the query.
+        // The browser also resolves the current location and retries the query.
       }
     }
   }
@@ -176,8 +176,7 @@ export async function getPublicJobs(options: JobListOptions) {
   });
   if (options.latitude === undefined || options.longitude === undefined)
     return jobs.slice(0, options.limit);
-  const nearbyJobs = jobs
-    .map((job) => {
+  const jobsWithDistance = jobs.map((job) => {
       const latitude = Number(job.latitude);
       const longitude = Number(job.longitude);
       const distance =
@@ -193,7 +192,20 @@ export async function getPublicJobs(options: JobListOptions) {
             )
           : null;
       return { ...job, distance };
-    })
+    });
+  if (options.city) {
+    return (
+      options.sort === "nearest"
+        ? jobsWithDistance.sort(
+            (first, second) =>
+              (first.distance ?? Number.POSITIVE_INFINITY) -
+                (second.distance ?? Number.POSITIVE_INFINITY) ||
+              second.createdAt.getTime() - first.createdAt.getTime(),
+          )
+        : jobsWithDistance
+    ).slice(0, options.limit);
+  }
+  const nearbyJobs = jobsWithDistance
     .filter((job) => job.distance !== null && job.distance <= 50);
   if (nearbyJobs.length === 0) {
     return jobs
