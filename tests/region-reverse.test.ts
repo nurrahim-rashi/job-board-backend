@@ -64,4 +64,50 @@ describe("reverse geocoding", () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("uses Indonesian regency and province instead of a district", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            features: [
+              {
+                properties: {
+                  type: "city",
+                  city: "Padalarang",
+                  county: "Kabupaten Bandung Barat",
+                  state: "Java",
+                  country: "Indonesia",
+                  countrycode: "ID",
+                },
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            address: {
+              town: "Padalarang",
+              county: "Kabupaten Bandung Barat",
+              state: "Jawa Barat",
+              country: "Indonesia",
+              country_code: "id",
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(reverseGeocodeCoordinates(-6.84, 107.47)).resolves.toEqual({
+      city: "Kabupaten Bandung Barat",
+      province: "Jawa Barat",
+      country: "Indonesia",
+      countryCode: "ID",
+    });
+  });
 });

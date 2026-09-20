@@ -147,11 +147,15 @@ function publicWhere(options: JobListOptions): Prisma.JobPostingWhereInput {
 export async function getPublicJobs(options: JobListOptions) {
   if (options.latitude !== undefined && options.longitude !== undefined) {
     await backfillActiveJobCoordinates();
-    if (!options.country) {
+    if (!options.country || !options.provinceName || !options.city) {
       try {
-        options.country = (
-          await reverseGeocodeCoordinates(options.latitude, options.longitude)
-        ).country;
+        const location = await reverseGeocodeCoordinates(
+          options.latitude,
+          options.longitude,
+        );
+        options.country ||= location.country;
+        options.provinceName ||= location.province;
+        options.city ||= location.city;
       } catch {
         // The browser also resolves the current country and retries the query.
       }

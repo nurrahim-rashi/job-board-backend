@@ -36,11 +36,37 @@ const indonesianProvinceAliases: Record<string, string> = {
   "jakarta special capital region": "DKI Jakarta",
 };
 
+const ambiguousIndonesianRegions = new Set([
+  "java",
+  "sumatra",
+  "kalimantan",
+  "sulawesi",
+  "papua",
+]);
+
+const normalizedIndonesianProvince = (name?: string) => {
+  const value = name?.trim();
+  if (!value) return undefined;
+  const key = value.toLocaleLowerCase("en");
+  if (ambiguousIndonesianRegions.has(key)) return undefined;
+  return indonesianProvinceAliases[key] ?? value;
+};
+
 export function provinceSearchNames(name?: string) {
   if (!name?.trim()) return [];
   const original = name.trim();
-  const alias = indonesianProvinceAliases[original.toLocaleLowerCase("en")];
-  return [...new Set([original, alias].filter((value): value is string => Boolean(value)))];
+  const normalized = original.toLocaleLowerCase("en");
+  const alias = indonesianProvinceAliases[normalized];
+  const reverseAliases = Object.entries(indonesianProvinceAliases)
+    .filter(([, value]) => value.toLocaleLowerCase("id") === normalized)
+    .map(([englishName]) => englishName);
+  return [
+    ...new Set(
+      [original, alias, ...reverseAliases].filter(
+        (value): value is string => Boolean(value),
+      ),
+    ),
+  ];
 }
 
 export type Country = { code: string; name: string };
@@ -234,7 +260,7 @@ export async function reverseGeocodeCoordinates(
     const params = new URLSearchParams({
       lat: String(latitude),
       lon: String(longitude),
-      lang: "en",
+      lang: "id",
     });
     const photonBaseUrl = (
       process.env.PHOTON_API_URL ?? "https://photon.komoot.io"
@@ -243,28 +269,36 @@ export async function reverseGeocodeCoordinates(
       signal: AbortSignal.timeout(8_000),
       headers: {
         Accept: "application/json",
-        "Accept-Language": "en",
+        "Accept-Language": "id,en",
         "User-Agent": process.env.GEOCODING_USER_AGENT ?? "PolarisJobBoard/1.0",
       },
     });
     if (!response.ok) throw new Error(`Photon returned ${response.status}`);
     const payload = (await response.json()) as { features?: PhotonFeature[] };
     const properties = payload.features?.[0]?.properties;
-    const city = (properties?.city ||
-      (properties?.type === "city" ? properties.name : undefined) ||
-      properties?.county || properties?.name)?.trim();
-    const rawProvince =
-      properties?.state?.trim() || properties?.county?.trim() || city;
     const country = properties?.country?.trim();
-    const province =
-      country?.toLocaleLowerCase("en") === "indonesia"
-        ? provinceSearchNames(rawProvince)[1] ?? rawProvince
-        : rawProvince;
-    if (!city || !country)
+    const isIndonesia = country?.toLocaleLowerCase("en") === "indonesia";
+    const city = (isIndonesia
+      ? properties?.county ||
+        (properties?.type === "county" ? properties.name : undefined) ||
+        properties?.city ||
+        properties?.name
+      : properties?.city ||
+        (properties?.type === "city" ? properties.name : undefined) ||
+        properties?.county ||
+        properties?.name
+    )?.trim();
+    const rawProvince =
+      properties?.state?.trim() ||
+      (!isIndonesia ? properties?.county?.trim() || city : undefined);
+    const province = isIndonesia
+      ? normalizedIndonesianProvince(rawProvince)
+      : rawProvince;
+    if (!city || !province || !country)
       throw new Error("Reverse geocoder returned an incomplete location");
     const location = {
       city,
-      province: province ?? city,
+      province,
       country,
       countryCode: properties?.countrycode?.toUpperCase() ?? "",
     };
@@ -291,35 +325,44 @@ export async function reverseGeocodeCoordinates(
         signal: AbortSignal.timeout(8_000),
         headers: {
           Accept: "application/json",
-          "Accept-Language": "en,id",
+          "Accept-Language": "id,en",
           "User-Agent": process.env.GEOCODING_USER_AGENT ?? "PolarisJobBoard/1.0",
         },
       },
     );
     if (!response.ok) throw new Error(`Nominatim returned ${response.status}`);
     const address = ((await response.json()) as NominatimReverseResult).address;
-    const city = uniqueParts(
-      address?.city,
-      address?.town,
-      address?.village,
-      address?.municipality,
-      address?.county,
-    )[0];
     const country = address?.country?.trim();
+    const isIndonesia = country?.toLocaleLowerCase("en") === "indonesia";
+    const city = uniqueParts(
+      ...(isIndonesia
+        ? [
+            address?.municipality,
+            address?.county,
+            address?.city,
+            address?.town,
+            address?.village,
+          ]
+        : [
+            address?.city,
+            address?.municipality,
+            address?.county,
+            address?.town,
+            address?.village,
+          ]),
+    )[0];
     const rawProvince =
       address?.state?.trim() ||
       address?.region?.trim() ||
-      address?.county?.trim() ||
-      city;
-    const province =
-      country?.toLocaleLowerCase("en") === "indonesia"
-        ? provinceSearchNames(rawProvince)[1] ?? rawProvince
-        : rawProvince;
-    if (!city || !country)
+      (!isIndonesia ? address?.county?.trim() || city : undefined);
+    const province = isIndonesia
+      ? normalizedIndonesianProvince(rawProvince)
+      : rawProvince;
+    if (!city || !province || !country)
       throw new Error("Nominatim returned an incomplete location");
     const location = {
       city,
-      province: province ?? city,
+      province,
       country,
       countryCode: address?.country_code?.toUpperCase() ?? "",
     };
