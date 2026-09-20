@@ -438,7 +438,7 @@ export async function reverseGeocodeCoordinates(
     const params = new URLSearchParams({
       lat: String(latitude),
       lon: String(longitude),
-      lang: "en",
+      lang: "id",
     });
     const photonBaseUrl = (
       process.env.PHOTON_API_URL ?? "https://photon.komoot.io"
