@@ -10,6 +10,17 @@ const optionalYearMonth = z.preprocess((value) => {
   return value;
 }, z.string().regex(/^\d{4}-\d{2}$/, "Use YYYY-MM format").optional());
 
+export const MINIMUM_APPLICANT_AGE = 17;
+
+/** Whole years elapsed, counting the birthday itself as the turning point. */
+const yearsSince = (date: Date) => {
+  const now = new Date();
+  let age = now.getFullYear() - date.getFullYear();
+  const month = now.getMonth() - date.getMonth();
+  if (month < 0 || (month === 0 && now.getDate() < date.getDate())) age -= 1;
+  return age;
+};
+
 const passwordSchema = z
   .string()
   .min(6, "Password must be at least 6 characters")
@@ -69,7 +80,18 @@ export const resetPasswordSchema = tokenSchema.extend({
 export const updateProfileSchema = z.object({
   name: z.string().trim().min(2).max(100).optional(),
   email: z.email("Enter a valid email address").trim().toLowerCase().optional(),
-  birthDate: z.coerce.date().optional(),
+  birthDate: z.coerce
+    .date()
+    .refine((date) => date.getTime() <= Date.now(), {
+      message: "Date of birth cannot be in the future",
+    })
+    .refine((date) => yearsSince(date) >= MINIMUM_APPLICANT_AGE, {
+      message: `You must be at least ${MINIMUM_APPLICANT_AGE} years old`,
+    })
+    .refine((date) => yearsSince(date) <= 100, {
+      message: "Enter a valid date of birth",
+    })
+    .optional(),
   gender: z.enum(["MALE", "FEMALE"]).optional(),
   lastEducation: z.string().trim().max(100).optional(),
   address: z.string().trim().max(2000).optional(),
