@@ -3,7 +3,11 @@ import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../utils/api-error.js";
 import { createQualityBadge } from "../utils/quality-badge.util.js";
 import { backfillActiveJobCoordinates } from "./geocoding.service.js";
-import { getRegions, provinceSearchNames } from "./region.service.js";
+import {
+  getRegions,
+  provinceSearchNames,
+  reverseGeocodeCoordinates,
+} from "./region.service.js";
 
 type CompanyQualitySource = {
   companyName: string;
@@ -400,6 +404,15 @@ export async function getPublicCompanies(options: {
 }) {
   if (options.latitude !== undefined && options.longitude !== undefined) {
     await backfillActiveJobCoordinates();
+    if (!options.country) {
+      try {
+        options.country = (
+          await reverseGeocodeCoordinates(options.latitude, options.longitude)
+        ).country;
+      } catch {
+        // The browser also resolves the current country and retries the query.
+      }
+    }
   }
   const city = options.city?.replace(
     /^(Kota Administrasi|Kabupaten|Kota)\s+/i,

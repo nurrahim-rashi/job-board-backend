@@ -71,6 +71,20 @@ type PhotonFeature = {
   geometry?: { coordinates?: [number, number] };
 };
 
+type NominatimReverseResult = {
+  address?: {
+    city?: string;
+    town?: string;
+    village?: string;
+    municipality?: string;
+    county?: string;
+    state?: string;
+    region?: string;
+    country?: string;
+    country_code?: string;
+  };
+};
+
 export type ReverseGeocodedLocation = {
   city: string;
   province: string;
@@ -208,7 +222,14 @@ export async function reverseGeocodeCoordinates(
   latitude: number,
   longitude: number,
 ): Promise<ReverseGeocodedLocation> {
+  const cacheKey = `reverse:${latitude.toFixed(4)}:${longitude.toFixed(4)}`;
+  const cached = cache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now())
+    return cached.data as ReverseGeocodedLocation;
+
+  let photonError: unknown;
   try {
+    await observePhotonRateLimit();
     const params = new URLSearchParams({
       lat: String(latitude),
       lon: String(longitude),
@@ -231,18 +252,86 @@ export async function reverseGeocodeCoordinates(
     const city = (properties?.city ||
       (properties?.type === "city" ? properties.name : undefined) ||
       properties?.county || properties?.name)?.trim();
-    const province = properties?.state?.trim();
+    const rawProvince =
+      properties?.state?.trim() || properties?.county?.trim() || city;
     const country = properties?.country?.trim();
-    if (!city || !province || !country)
+    const province =
+      country?.toLocaleLowerCase("en") === "indonesia"
+        ? provinceSearchNames(rawProvince)[1] ?? rawProvince
+        : rawProvince;
+    if (!city || !country)
       throw new Error("Reverse geocoder returned an incomplete location");
-    return {
+    const location = {
       city,
-      province,
+      province: province ?? city,
       country,
       countryCode: properties?.countrycode?.toUpperCase() ?? "",
     };
+    cache.set(cacheKey, {
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      data: location,
+    });
+    return location;
   } catch (error) {
-    console.error("Unable to reverse geocode coordinates", error);
+    photonError = error;
+  }
+
+  try {
+    const params = new URLSearchParams({
+      lat: String(latitude),
+      lon: String(longitude),
+      format: "jsonv2",
+      addressdetails: "1",
+      zoom: "12",
+    });
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?${params.toString()}`,
+      {
+        signal: AbortSignal.timeout(8_000),
+        headers: {
+          Accept: "application/json",
+          "Accept-Language": "en,id",
+          "User-Agent": process.env.GEOCODING_USER_AGENT ?? "PolarisJobBoard/1.0",
+        },
+      },
+    );
+    if (!response.ok) throw new Error(`Nominatim returned ${response.status}`);
+    const address = ((await response.json()) as NominatimReverseResult).address;
+    const city = uniqueParts(
+      address?.city,
+      address?.town,
+      address?.village,
+      address?.municipality,
+      address?.county,
+    )[0];
+    const country = address?.country?.trim();
+    const rawProvince =
+      address?.state?.trim() ||
+      address?.region?.trim() ||
+      address?.county?.trim() ||
+      city;
+    const province =
+      country?.toLocaleLowerCase("en") === "indonesia"
+        ? provinceSearchNames(rawProvince)[1] ?? rawProvince
+        : rawProvince;
+    if (!city || !country)
+      throw new Error("Nominatim returned an incomplete location");
+    const location = {
+      city,
+      province: province ?? city,
+      country,
+      countryCode: address?.country_code?.toUpperCase() ?? "",
+    };
+    cache.set(cacheKey, {
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      data: location,
+    });
+    return location;
+  } catch (nominatimError) {
+    console.error("Unable to reverse geocode coordinates", {
+      photonError,
+      nominatimError,
+    });
     throw new ApiError("Unable to determine your location", 502);
   }
 }
