@@ -32,7 +32,9 @@ const scheduleLines = (context: InterviewEmailContext) =>
     ...(context.notes ? [`Notes: ${context.notes}`] : []),
   ].join("\n");
 
-export const sendInterviewScheduledEmail = (context: InterviewEmailContext) =>
+export const sendInterviewScheduledEmail = async (
+  context: InterviewEmailContext,
+) =>
   sendEmail({
     to: context.applicantEmail,
     subject: `Interview schedule for ${context.jobTitle}`,
@@ -47,7 +49,9 @@ export const sendInterviewScheduledEmail = (context: InterviewEmailContext) =>
     ].join("\n"),
   });
 
-export const sendInterviewUpdatedEmail = (context: InterviewEmailContext) =>
+export const sendInterviewUpdatedEmail = async (
+  context: InterviewEmailContext,
+) =>
   sendEmail({
     to: context.applicantEmail,
     subject: `Updated interview schedule for ${context.jobTitle}`,
@@ -62,7 +66,9 @@ export const sendInterviewUpdatedEmail = (context: InterviewEmailContext) =>
     ].join("\n"),
   });
 
-export const sendInterviewCancelledEmail = (context: InterviewEmailContext) =>
+export const sendInterviewCancelledEmail = async (
+  context: InterviewEmailContext,
+) =>
   sendEmail({
     to: context.applicantEmail,
     subject: `Interview cancelled for ${context.jobTitle}`,
@@ -75,7 +81,9 @@ export const sendInterviewCancelledEmail = (context: InterviewEmailContext) =>
     ].join("\n"),
   });
 
-export const sendApplicantReminderEmail = (context: InterviewEmailContext) =>
+export const sendApplicantReminderEmail = async (
+  context: InterviewEmailContext,
+) =>
   sendEmail({
     to: context.applicantEmail,
     subject: `Reminder: interview for ${context.jobTitle} tomorrow`,
@@ -90,7 +98,9 @@ export const sendApplicantReminderEmail = (context: InterviewEmailContext) =>
     ].join("\n"),
   });
 
-export const sendAdminReminderEmail = (context: InterviewEmailContext) =>
+export const sendAdminReminderEmail = async (
+  context: InterviewEmailContext,
+) =>
   sendEmail({
     to: context.companyEmail,
     subject: `Reminder: interview with ${context.applicantName} tomorrow`,

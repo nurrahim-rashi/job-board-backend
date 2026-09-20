@@ -164,30 +164,55 @@ export const createInterviewsService = async (
 
   const company = await getCompany(job);
 
-  const interviews = await prisma.$transaction(async (transaction) => {
-    const created: InterviewRecord[] = [];
-
-    for (const schedule of input.schedules) {
-      created.push(
-        await transaction.interview.create({
+  let interviews: InterviewRecord[];
+  try {
+    const updatedApplications = await prisma.$transaction(
+      input.schedules.map((schedule) =>
+        prisma.jobApplication.update({
+          where: { id: schedule.applicationId },
           data: {
-            jobApplicationId: schedule.applicationId,
-            interviewDate: schedule.interviewDate,
-            locationOrLink: schedule.locationOrLink,
-            notes: schedule.notes ?? null,
+            status: "INTERVIEW",
+            interview: {
+              create: {
+                interviewDate: schedule.interviewDate,
+                locationOrLink: schedule.locationOrLink,
+                notes: schedule.notes ?? null,
+              },
+            },
           },
-          include: interviewInclude,
+          select: { interview: { include: interviewInclude } },
         }),
-      );
-
-      await transaction.jobApplication.update({
-        where: { id: schedule.applicationId },
-        data: { status: "INTERVIEW" },
-      });
+      ),
+    );
+    interviews = updatedApplications.flatMap((application) =>
+      application.interview ? [application.interview] : [],
+    );
+    if (interviews.length !== input.schedules.length) {
+      throw new Error("Interview transaction returned incomplete data");
     }
-
-    return created;
-  });
+  } catch (error) {
+    const code =
+      typeof error === "object" && error !== null && "code" in error
+        ? String(error.code)
+        : "";
+    if (code === "P2002") {
+      throw new ApiError(
+        "One of the selected applicants already has an interview schedule",
+        409,
+      );
+    }
+    if (code === "P2025") {
+      throw new ApiError(
+        "One of the selected applications no longer exists",
+        404,
+      );
+    }
+    console.error("Unable to create interview schedules", error);
+    throw new ApiError(
+      "Interview scheduling is temporarily unavailable. Please try again.",
+      503,
+    );
+  }
 
   const notified = await dispatchEmails(
     interviews.map((interview) =>

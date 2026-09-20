@@ -30,6 +30,7 @@ export async function sendEmail(input: EmailInput) {
   try {
     response = await fetch("https://api.resend.com/emails", {
       method: "POST",
+      signal: AbortSignal.timeout(10_000),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
@@ -59,5 +60,13 @@ export async function sendEmail(input: EmailInput) {
       `Resend rejected the email (${response.status}); using local email preview. ${details}`,
     );
     printEmailPreview(input);
+    return;
   }
+
+  const result = (await response.json().catch(() => null)) as
+    | { id?: string }
+    | null;
+  console.info(
+    `Email accepted by Resend${result?.id ? ` (${result.id})` : ""}: ${input.subject}`,
+  );
 }
