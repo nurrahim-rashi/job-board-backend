@@ -85,13 +85,16 @@ describe("Job applications", () => {
       province: "Jakarta",
     });
     const { company } = await createTestCompany("Application");
-    const job = await createTestJob(company.id, "Application Flow");
+    const job = await createTestJob(company.id, "Application Flow", {
+      salaryCurrency: "USD",
+    });
     const auth = createAuthToken(user);
 
     const applied = await request(app)
       .post(`/jobs/${job.slug}/applications`)
       .set("Authorization", `Bearer ${auth}`)
       .field("expectedSalary", "15000000")
+      .field("expectedSalaryCurrency", "IDR")
       .attach("cv", pdf, {
         filename: "application.pdf",
         contentType: "application/pdf",
@@ -100,6 +103,7 @@ describe("Job applications", () => {
     expect(applied.body.data).toMatchObject({
       status: "PENDING",
       expectedSalary: 15_000_000,
+      expectedSalaryCurrency: "USD",
       job: { id: job.id },
     });
 
@@ -107,6 +111,7 @@ describe("Job applications", () => {
       where: { id: applied.body.data.id },
     });
     expect(stored.lastEducationSnapshot).toBe(education);
+    expect(stored.expectedSalaryCurrency).toBe("USD");
 
     await prisma.user.update({
       where: { id: user.id },
@@ -123,9 +128,23 @@ describe("Job applications", () => {
     expect(applications.status).toBe(200);
     expect(applications.body.data).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: stored.id, status: "PENDING" }),
+        expect.objectContaining({
+          id: stored.id,
+          status: "PENDING",
+          expectedSalaryCurrency: "USD",
+        }),
       ]),
     );
+
+    const updatedSalary = await request(app)
+      .patch(`/applications/me/${stored.id}/expected-salary`)
+      .set("Authorization", `Bearer ${auth}`)
+      .send({ expectedSalary: 16_000_000, expectedSalaryCurrency: "IDR" });
+    expect(updatedSalary.status).toBe(200);
+    expect(updatedSalary.body.data).toMatchObject({
+      expectedSalary: 16_000_000,
+      expectedSalaryCurrency: "USD",
+    });
   });
 
   it("shows rejection details and prevents duplicate applications", async () => {

@@ -52,7 +52,7 @@ export const getApplicantDetailService = async (
     id: rest.id,
     status: rest.status,
     expectedSalary: rest.expectedSalary,
-    expectedSalaryCurrency: rest.expectedSalaryCurrency,
+    expectedSalaryCurrency: job.salaryCurrency,
     expectedSalaryRequestedAt,
     rejectionReason: rest.rejectionReason,
     appliedAt: rest.createdAt,

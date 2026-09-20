@@ -46,7 +46,6 @@ export async function createApplication(
   slug: string,
   cvFile: Express.Multer.File,
   expectedSalary?: number,
-  expectedSalaryCurrency = "IDR",
 ) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -92,7 +91,7 @@ export async function createApplication(
       deletedAt: null,
       deadline: { gte: new Date() },
     },
-    select: { id: true },
+    select: { id: true, salaryCurrency: true },
   });
   if (!job) throw new ApiError("Job is not available", 404);
   const duplicate = await prisma.jobApplication.findUnique({
@@ -106,7 +105,7 @@ export async function createApplication(
       userId,
       cvFile: `/uploads/cvs/${cvFile.filename}`,
       expectedSalary,
-      expectedSalaryCurrency,
+      expectedSalaryCurrency: job.salaryCurrency,
       lastEducationSnapshot: user.lastEducation,
     },
     select: applicationSelect,
@@ -121,6 +120,7 @@ export async function getMyApplications(userId: number) {
   });
   return applications.map((application) => ({
     ...application,
+    expectedSalaryCurrency: application.job.salaryCurrency,
     expectedSalaryRequestedAt: null,
   }));
 }
@@ -173,6 +173,7 @@ export async function getMyApplicationsPage(
   return {
     items: items.map((application) => ({
       ...application,
+      expectedSalaryCurrency: application.job.salaryCurrency,
       expectedSalaryRequestedAt: null,
     })),
     pagination: {
@@ -236,6 +237,7 @@ export async function getMyApplicationDetail(
     : null;
   return {
     ...application,
+    expectedSalaryCurrency: application.job.salaryCurrency,
     interview: application.interview
       ? {
           ...application.interview,
@@ -251,19 +253,22 @@ export async function submitRequestedExpectedSalary(
   userId: number,
   applicationId: number,
   expectedSalary: number,
-  expectedSalaryCurrency: string,
 ) {
-  const updated = await prisma.$queryRaw<
-    Array<{ id: number; expectedSalary: number; expectedSalaryCurrency: string }>
-  >(Prisma.sql`
-    UPDATE "job_applications"
-    SET "expectedSalary" = ${expectedSalary},
-        "expectedSalaryCurrency" = ${expectedSalaryCurrency},
-        "updatedAt" = NOW()
-    WHERE "id" = ${applicationId}
-      AND "userId" = ${userId}
-    RETURNING "id", "expectedSalary", "expectedSalaryCurrency"
-  `);
-  if (!updated.length) throw new ApiError("Application was not found", 404);
-  return updated[0];
+  const application = await prisma.jobApplication.findFirst({
+    where: { id: applicationId, userId },
+    select: { job: { select: { salaryCurrency: true } } },
+  });
+  if (!application) throw new ApiError("Application was not found", 404);
+  return prisma.jobApplication.update({
+    where: { id: applicationId },
+    data: {
+      expectedSalary,
+      expectedSalaryCurrency: application.job.salaryCurrency,
+    },
+    select: {
+      id: true,
+      expectedSalary: true,
+      expectedSalaryCurrency: true,
+    },
+  });
 }

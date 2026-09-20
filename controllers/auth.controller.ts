@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { type AuthenticatedRequest } from "../middlewares/auth.middleware.js";
-import { uploadImage } from "../lib/cloudinary.js";
+import { uploadImage, verifiedImage } from "../lib/cloudinary.js";
 import { getHomepageData } from "../services/homepage.service.js";
 import { ApiError } from "../utils/api-error.js";
 import {
@@ -20,40 +20,6 @@ import {
 } from "../services/auth.service.js";
 
 const userId = (req: Request) => (req as AuthenticatedRequest).user.id;
-
-function imageMime(file: Express.Multer.File) {
-  const bytes = file.buffer;
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff)
-    return "image/jpeg";
-  if (
-    bytes.length >= 8 &&
-    bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
-  ) return "image/png";
-  if (
-    bytes.length >= 12 &&
-    bytes.subarray(0, 4).toString("ascii") === "RIFF" &&
-    bytes.subarray(8, 12).toString("ascii") === "WEBP"
-  ) return "image/webp";
-  if (
-    bytes.length >= 6 &&
-    (bytes.subarray(0, 6).toString("ascii") === "GIF87a" ||
-      bytes.subarray(0, 6).toString("ascii") === "GIF89a")
-  ) return "image/gif";
-  if (bytes.length >= 12 && bytes.subarray(4, 8).toString("ascii") === "ftyp") {
-    const brand = bytes.subarray(8, 12).toString("ascii").toLocaleLowerCase("en");
-    if (brand === "avif" || brand === "avis") return "image/avif";
-    if (["heic", "heix", "hevc", "hevx", "mif1", "msf1"].includes(brand))
-      return "image/heic";
-  }
-  return null;
-}
-
-function verifiedImage(file: Express.Multer.File, label: string) {
-  const mimetype = imageMime(file);
-  if (!mimetype)
-    throw new ApiError(`${label} must be a valid JPG, PNG, WEBP, GIF, AVIF, or HEIC image`, 400);
-  return { ...file, mimetype };
-}
 
 export async function registerController(req: Request, res: Response) {
   const session = await registerUser(req.body);
