@@ -1,4 +1,5 @@
 import { sendEmail } from "./email.service.js";
+import { buildPolarisEmail } from "./email-template.service.js";
 
 export type SubscriptionExpiryEmailContext = {
   userName: string;
@@ -18,8 +19,9 @@ export const formatSubscriptionEndDate = (date: Date) =>
 
 export const sendSubscriptionExpiryReminderEmail = (
   context: SubscriptionExpiryEmailContext,
-) =>
-  sendEmail({
+) => {
+  const pricingUrl = `${(process.env.FRONTEND_URL ?? "http://localhost:5173").replace(/\/$/, "")}/pricing`;
+  return sendEmail({
     to: context.userEmail,
     subject: `Reminder: your ${context.planName} subscription expires tomorrow`,
     text: [
@@ -31,4 +33,17 @@ export const sendSubscriptionExpiryReminderEmail = (
       "",
       "Renew your subscription to continue using your subscription benefits.",
     ].join("\n"),
+    html: buildPolarisEmail({
+      preheader: `Your ${context.planName} subscription expires tomorrow.`,
+      eyebrow: "Subscription reminder",
+      title: "Keep your Polaris benefits",
+      greeting: `Hi ${context.userName},`,
+      message: `Your ${context.planName} subscription will expire tomorrow. Renew it to keep using your subscription benefits without interruption.`,
+      details: [
+        { label: "Plan", value: context.planName },
+        { label: "Expiry date", value: formatSubscriptionEndDate(context.endDate) },
+      ],
+      action: { label: "View subscription plans", url: pricingUrl },
+    }),
   });
+};
