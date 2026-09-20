@@ -273,7 +273,7 @@ export async function reverseGeocodeCoordinates(
     const params = new URLSearchParams({
       lat: String(latitude),
       lon: String(longitude),
-      lang: "en",
+      lang: "id",
     });
     const photonBaseUrl = (
       process.env.PHOTON_API_URL ?? "https://photon.komoot.io"
@@ -282,7 +282,7 @@ export async function reverseGeocodeCoordinates(
       signal: AbortSignal.timeout(8_000),
       headers: {
         Accept: "application/json",
-        "Accept-Language": "en",
+        "Accept-Language": "id,en",
         "User-Agent": process.env.GEOCODING_USER_AGENT ?? "PolarisJobBoard/1.0",
       },
     });
@@ -307,7 +307,7 @@ export async function reverseGeocodeCoordinates(
       throw new Error("Reverse geocoder returned an incomplete location");
     const location = {
       city,
-      province: province ?? city,
+      province,
       country,
       countryCode: properties?.countrycode?.toUpperCase() ?? "",
     };
@@ -334,7 +334,7 @@ export async function reverseGeocodeCoordinates(
         signal: AbortSignal.timeout(8_000),
         headers: {
           Accept: "application/json",
-          "Accept-Language": "en,id",
+          "Accept-Language": "id,en",
           "User-Agent": process.env.GEOCODING_USER_AGENT ?? "PolarisJobBoard/1.0",
         },
       },
@@ -373,7 +373,7 @@ export async function reverseGeocodeCoordinates(
       throw new Error("Nominatim returned an incomplete location");
     const location = {
       city,
-      province: province ?? city,
+      province,
       country,
       countryCode: address?.country_code?.toUpperCase() ?? "",
     };
