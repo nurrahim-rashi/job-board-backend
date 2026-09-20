@@ -173,3 +173,56 @@ describe("Changing the password from the profile", () => {
     expect(response.status).toBe(401);
   });
 });
+
+describe("Applicant age limit", () => {
+  const isoYearsAgo = (years: number, dayShift = 0) => {
+    const date = new Date();
+    date.setFullYear(date.getFullYear() - years);
+    date.setDate(date.getDate() + dayShift);
+    return date.toISOString().slice(0, 10);
+  };
+
+  it("accepts an applicant who turns 17 today", async () => {
+    const user = await createTestSeeker("age-exactly-17", {
+      emailVerifiedAt: new Date(),
+    });
+
+    const response = await request(app)
+      .patch("/auth/profile")
+      .set("Authorization", `Bearer ${createAuthToken(user)}`)
+      .send({ birthDate: isoYearsAgo(17) });
+
+    expect(response.status).toBe(200);
+  });
+
+  it("rejects an applicant who is still 16 for one more day", async () => {
+    const user = await createTestSeeker("age-16", {
+      emailVerifiedAt: new Date(),
+    });
+
+    const response = await request(app)
+      .patch("/auth/profile")
+      .set("Authorization", `Bearer ${createAuthToken(user)}`)
+      .send({ birthDate: isoYearsAgo(17, 1) });
+
+    expect(response.status).toBe(400);
+
+    const stored = await prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+    });
+    expect(stored.birthDate).toBeNull();
+  });
+
+  it("rejects a birth date in the future", async () => {
+    const user = await createTestSeeker("age-future", {
+      emailVerifiedAt: new Date(),
+    });
+
+    const response = await request(app)
+      .patch("/auth/profile")
+      .set("Authorization", `Bearer ${createAuthToken(user)}`)
+      .send({ birthDate: isoYearsAgo(-1) });
+
+    expect(response.status).toBe(400);
+  });
+});
