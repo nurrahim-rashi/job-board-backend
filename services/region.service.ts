@@ -303,9 +303,9 @@ export async function reverseGeocodeCoordinates(
       isIndonesia
         ? normalizeIndonesianProvinceName(rawProvince)
         : rawProvince;
-    if (!city || !country)
+    if (!city || !province || !country)
       throw new Error("Reverse geocoder returned an incomplete location");
-    const location = {
+    const location: ReverseGeocodedLocation = {
       city,
       province,
       country,
@@ -369,9 +369,9 @@ export async function reverseGeocodeCoordinates(
       isIndonesia
         ? normalizeIndonesianProvinceName(rawProvince)
         : rawProvince;
-    if (!city || !country)
+    if (!city || !province || !country)
       throw new Error("Nominatim returned an incomplete location");
-    const location = {
+    const location: ReverseGeocodedLocation = {
       city,
       province,
       country,
@@ -424,7 +424,7 @@ export async function reverseGeocodeCoordinates(
       if (!city || !province || !country)
         throw new Error("BigDataCloud returned an incomplete location");
 
-      const location = {
+      const location: ReverseGeocodedLocation = {
         city,
         province,
         country,
