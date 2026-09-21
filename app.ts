@@ -29,20 +29,25 @@ import { isImageStorageConfigured } from "./lib/cloudinary.js";
 const app = express();
 
 app.set("trust proxy", 1);
+const isTest = process.env.NODE_ENV === "test" || process.env.VITEST;
 
-const logger = pino({
-  transport:
-    process.env.NODE_ENV !== "production"
-      ? {
-          target: "pino-pretty",
-          options: {
-            colorize: true,
-            translateTime: "SYS:standard",
-            ignore: "pid,hostname",
-          },
-        }
-      : undefined,
-});
+const logger = pino(
+  isTest
+    ? { level: "silent" }
+    : {
+        transport:
+          process.env.NODE_ENV !== "production"
+            ? {
+                target: "pino-pretty",
+                options: {
+                  colorize: true,
+                  translateTime: "SYS:standard",
+                  ignore: "pid,hostname",
+                },
+              }
+            : undefined,
+      },
+);
 
 app.use((pinoHttp as any)({ logger }));
 
