@@ -1,6 +1,8 @@
 import cors from "cors";
 import "dotenv/config";
 import express from "express";
+import pino from "pino";
+import pinoHttp from "pino-http";
 import type {} from "./types/express.js";
 import { corsOptions } from "./config/cors.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
@@ -28,6 +30,22 @@ const app = express();
 
 app.set("trust proxy", 1);
 
+const logger = pino({
+  transport:
+    process.env.NODE_ENV !== "production"
+      ? {
+          target: "pino-pretty",
+          options: {
+            colorize: true,
+            translateTime: "SYS:standard",
+            ignore: "pid,hostname",
+          },
+        }
+      : undefined,
+});
+
+app.use((pinoHttp as any)({ logger }));
+
 // configs
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -48,7 +66,9 @@ app.get("/", (_req, res) => {
 app.get("/health", (_req, res) => {
   res.status(200).json({
     message: "Polaris API is healthy",
-    services: { imageStorage: isImageStorageConfigured() ? "configured" : "missing" },
+    services: {
+      imageStorage: isImageStorageConfigured() ? "configured" : "missing",
+    },
   });
 });
 
@@ -59,9 +79,9 @@ app.use("/reviews", reviewRoutes);
 app.use("/assessment", assessmentRoutes);
 app.use("/subscriptions", subscriptionRoutes);
 app.use("/cv", cvRoutes);
-app.use("/jobs", jobRoutes); 
+app.use("/jobs", jobRoutes);
 app.use("/jobs", applicantTestRoutes);
-app.use("/job-posting", preSelectionTestRoutes); 
+app.use("/job-posting", preSelectionTestRoutes);
 app.use("/job-posting", applicantRoutes);
 app.use("/job-posting", interviewRoutes);
 app.use("/job-posting", jobPostingRoutes);
@@ -74,6 +94,5 @@ app.use("/", applicationRoutes);
 
 // errors
 app.use(errorHandler);
-
 
 export default app;
