@@ -1,4 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm ci --include=dev"
+  "installCommand": "npm ci --include=dev",
+  "crons": [
+    {
+      "path": "/cron/interview-reminder",
+      "schedule": "0 1 * * *"
+    }
+  ]
 }

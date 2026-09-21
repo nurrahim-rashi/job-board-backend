@@ -11,6 +11,7 @@ import { applicationRoutes } from "./routes/application.routes.js";
 import { assessmentRoutes } from "./routes/assessment.routes.js";
 import { authRoutes } from "./routes/auth.routes.js";
 import { companyRoutes } from "./routes/company.routes.js";
+import { cronRoutes } from "./routes/cron.routes.js";
 import { interviewRoutes } from "./routes/interview.routes.js";
 import { jobPostingRoutes } from "./routes/job-posting.routes.js";
 import { jobRoutes } from "./routes/job.routes.js";
@@ -25,17 +26,13 @@ import { isImageStorageConfigured } from "./lib/cloudinary.js";
 
 const app = express();
 
-// Vercel terminates TLS in front of the function, so without this the rate
-// limiters would see one proxy address for every visitor.
 app.set("trust proxy", 1);
 
 // configs
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// Avatars and company media are public by design. Applicant CVs are not, and
-// earlier builds wrote them into this same tree, so that one folder is blocked
-// here: reaching a CV has to go through the job-owner guarded endpoint.
+
 app.use("/uploads/cvs", (_req, res) => {
   res.status(404).json({ message: "Not found" });
 });
@@ -72,6 +69,7 @@ app.use("/companies", companyRoutes);
 app.use("/profiles", profileRoutes);
 app.use("/regions", regionRoutes);
 app.use("/exchange-rates", exchangeRateRoutes);
+app.use("/cron", cronRoutes);
 app.use("/", applicationRoutes);
 
 // errors

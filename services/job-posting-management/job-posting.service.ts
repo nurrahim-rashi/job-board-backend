@@ -1,5 +1,5 @@
 import { JobPosting } from "../../generated/prisma/client.js";
-import { uploadImage } from "../../lib/cloudinary.js";
+import { removeImageByUrl, uploadImage } from "../../lib/cloudinary.js";
 import { prisma } from "../../lib/prisma.js";
 import { geocodeLocation } from "../geocoding.service.js";
 import { ApiError } from "../../utils/api-error.js";
@@ -10,6 +10,15 @@ import {
 } from "../../validators/job-posting.validator.js";
 
 const randomSuffix = () => Math.random().toString(36).slice(2, 8);
+
+const discardBanners = async (urls: (string | null | undefined)[]) => {
+  for (const url of urls) {
+    if (!url) continue;
+    await removeImageByUrl(url).catch((error) =>
+      console.error("Unable to remove a replaced job banner", error),
+    );
+  }
+};
 
 export const createJobService = async (
   userId: number,
@@ -97,7 +106,7 @@ export const updateJobService = async (
       )
     : undefined;
 
-  return prisma.jobPosting.update({
+  const updated = await prisma.jobPosting.update({
     where: { id: job.id },
     data: {
       ...jobInput,
@@ -110,6 +119,12 @@ export const updateJobService = async (
       ...(removeBanner ? { banner: null } : bannerUrl ? { banner: bannerUrl } : {}),
     },
   });
+
+  await discardBanners(
+    removeBanner ? [job.banner, bannerUrl] : bannerUrl ? [job.banner] : [],
+  );
+
+  return updated;
 };
 
 export const togglePublishService = async (

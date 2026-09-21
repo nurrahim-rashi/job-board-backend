@@ -42,6 +42,12 @@ const applicationSelect = {
   },
 } as const;
 
+// A deleted job posting disappears from the seeker side, except for the hires who still need the
+// record for their history and to review the company.
+export const visibleToSeeker: Prisma.JobApplicationWhereInput = {
+  OR: [{ job: { deletedAt: null } }, { status: "ACCEPTED" }],
+};
+
 export async function createApplication(
   userId: number,
   slug: string,
@@ -115,7 +121,7 @@ export async function createApplication(
 
 export async function getMyApplications(userId: number) {
   const applications = await prisma.jobApplication.findMany({
-    where: { userId },
+    where: { userId, ...visibleToSeeker },
     select: applicationSelect,
     orderBy: { createdAt: "desc" },
   });
@@ -141,6 +147,7 @@ export async function getMyApplicationsPage(
   const where: Prisma.JobApplicationWhereInput = {
     userId,
     status: { not: "DRAFT" as const },
+    ...visibleToSeeker,
     ...(view === "interviews"
       ? {
           interview:
@@ -188,7 +195,7 @@ export async function getMyApplicationsPage(
 
 export async function getMyApplicationForJob(userId: number, slug: string) {
   return prisma.jobApplication.findFirst({
-    where: { userId, job: { slug } },
+    where: { userId, job: { slug }, ...visibleToSeeker },
     select: {
       id: true,
       status: true,
@@ -216,7 +223,7 @@ export async function getMyApplicationDetail(
   applicationId: number,
 ) {
   const application = await prisma.jobApplication.findFirst({
-    where: { id: applicationId, userId },
+    where: { id: applicationId, userId, ...visibleToSeeker },
     select: applicationSelect,
   });
   if (!application) throw new ApiError("Application not found", 404);
@@ -256,7 +263,7 @@ export async function submitRequestedExpectedSalary(
   expectedSalary: number,
 ) {
   const application = await prisma.jobApplication.findFirst({
-    where: { id: applicationId, userId },
+    where: { id: applicationId, userId, ...visibleToSeeker },
     select: { job: { select: { salaryCurrency: true } } },
   });
   if (!application) throw new ApiError("Application was not found", 404);

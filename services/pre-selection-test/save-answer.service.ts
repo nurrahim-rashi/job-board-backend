@@ -15,8 +15,8 @@ export const saveAnswerService = async (
 ) => {
     const { result, duration } = await getActiveSession(application);
 
-    if(isExpired(result.createdAt, duration)){
-        await finalizeTest(result.id);
+    if(isExpired(result.startedAt, duration)){
+        await finalizeTest(result.id, duration);
         throw new ApiError("Test time has expired", 409)
     }
 

@@ -77,13 +77,14 @@ npx prisma generate
 | `MIDTRANS_IS_PRODUCTION` | No | Use `true` for production; otherwise sandbox mode is used. |
 | `INTERVIEW_TIMEZONE` | No | Interview email/reminder timezone; defaults to `Asia/Jakarta`. |
 | `SUBSCRIPTION_TIMEZONE` | No | Subscription reminder timezone; defaults to `Asia/Jakarta`. |
+| `CRON_SECRET` | Required in production | Shared secret Vercel Cron sends as `Authorization: Bearer …`; without it `/cron/*` answers 503. |
 | `NODE_ENV` | No | Set to `production` in production. |
 
 Never commit real secrets or production credentials.
 
 ## Production Deployment
 
-Create the backend Vercel project with **Root Directory** set to `api`. Configure these variables for the Production environment:
+Create the backend Vercel project with **Root Directory** set to `job-board-backend`. Configure these variables for the Production environment:
 
 ```env
 DATABASE_URL=postgresql://...
@@ -255,7 +256,23 @@ Midtrans notifications update payment/subscription state. A scheduled job expire
 - Subscription expiry reminders: daily at 08:00 in `SUBSCRIPTION_TIMEZONE`
 - Subscription expiration: hourly
 
-These in-process schedules run with the long-lived local Node server. Vercel Functions are ephemeral, so production scheduling must invoke dedicated endpoints through Vercel Cron or run the jobs in a separate worker; do not rely on `node-cron` inside a serverless invocation.
+These in-process schedules run with the long-lived local Node server. Vercel Functions are ephemeral, so `node-cron` never fires in a serverless invocation.
+
+Interview reminders therefore also have an HTTP trigger for production:
+
+| Endpoint | Vercel Cron schedule | Runs |
+| --- | --- | --- |
+| `GET /cron/interview-reminder` | `0 1 * * *` (01:00 UTC = 08:00 in `Asia/Jakarta`) | `sendInterviewRemindersService` |
+
+The schedule lives in `vercel.json`. Vercel sends `Authorization: Bearer $CRON_SECRET` on each invocation, and `middlewares/cron.middleware.ts` rejects anything else with 401; if `CRON_SECRET` is unset the endpoint answers 503 rather than running unprotected. Set the variable in the Vercel project and redeploy.
+
+Vercel's Hobby plan allows two cron jobs at daily granularity. The two subscription schedules still have no HTTP trigger, so on production they do not run; give them the same treatment if the plan allows it, or run a separate worker.
+
+To test locally:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:8000/cron/interview-reminder
+```
 
 ## Database and ERD
 

@@ -17,6 +17,9 @@ import {
 
 const notSchedulable: ApplicationStatus[] = ["DRAFT", "REJECTED"];
 
+const INTERVIEW_SLOT_MINUTES = 60;
+const SLOT_MS = INTERVIEW_SLOT_MINUTES * 60_000;
+
 const interviewInclude = {
   jobApplication: {
     select: {
@@ -87,16 +90,34 @@ const findOwnedInterview = async (job: JobPosting, interviewId: number) => {
   return interview;
 };
 
+// An interview occupies a slot rather than an instant, so two schedules clash whenever they start
+// less than one slot apart. Matching on equal timestamps let an admin book 09:00 and 09:01.
 const assertSlotIsFree = async (
   jobId: number,
   dates: Date[],
   excludedInterviewId?: number,
 ) => {
+  const ordered = [...dates].sort((a, b) => a.getTime() - b.getTime());
+  for (let index = 1; index < ordered.length; index += 1) {
+    const gap = ordered[index]!.getTime() - ordered[index - 1]!.getTime();
+    if (gap < SLOT_MS) {
+      throw new ApiError(
+        `Two of the selected schedules are less than ${INTERVIEW_SLOT_MINUTES} minutes apart`,
+        409,
+      );
+    }
+  }
+
   const clash = await prisma.interview.findFirst({
     where: {
       jobApplication: { jobId },
       status: { not: "CANCELLED" },
-      interviewDate: { in: dates },
+      OR: dates.map((date) => ({
+        interviewDate: {
+          gt: new Date(date.getTime() - SLOT_MS),
+          lt: new Date(date.getTime() + SLOT_MS),
+        },
+      })),
       ...(excludedInterviewId && { id: { not: excludedInterviewId } }),
     },
     select: { interviewDate: true },
@@ -104,7 +125,7 @@ const assertSlotIsFree = async (
 
   if (clash) {
     throw new ApiError(
-      `Another applicant is already scheduled on ${clash.interviewDate.toISOString()}`,
+      `Another applicant is already scheduled within ${INTERVIEW_SLOT_MINUTES} minutes of ${clash.interviewDate.toISOString()}`,
       409,
     );
   }
@@ -271,6 +292,14 @@ export const updateInterviewService = async (
 
   if (interview.status === "CANCELLED" && input.status !== "SCHEDULED") {
     throw new ApiError("This interview has already been cancelled", 409);
+  }
+
+  const nextDate = input.interviewDate ?? interview.interviewDate;
+  if (input.status === "COMPLETED" && nextDate.getTime() > Date.now()) {
+    throw new ApiError(
+      "This interview cannot be marked completed before it takes place",
+      409,
+    );
   }
 
   const rescheduled =

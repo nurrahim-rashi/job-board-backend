@@ -66,7 +66,7 @@ export const startTestService = async (application: ApplicationWithJob) => {
   }
 
   if (isExpired(result.startedAt, duration)) {
-    await finalizeTest(result.id)
+    await finalizeTest(result.id, duration)
     throw new ApiError("Test time has expired", 409)
   }
 
