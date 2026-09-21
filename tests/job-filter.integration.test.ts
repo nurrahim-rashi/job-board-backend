@@ -182,6 +182,8 @@ describe("Job sorting", () => {
     const response = await request(app).get("/jobs").query({
       title: testMarker,
       city: "Jakarta",
+      provinceName: "Jakarta",
+      country: "Indonesia",
       sort: "nearest",
       latitude: -6.2,
       longitude: 106.8,
