@@ -112,10 +112,14 @@ describe("Applicant and company profiles", () => {
     const response = await request(app)
       .put("/auth/avatar")
       .set("Authorization", `Bearer ${createAuthToken(user)}`)
-      .set("Content-Type", "application/pdf")
-      .send(Buffer.from("not an image"));
+      .attach("avatar", Buffer.from("not an image"), {
+        filename: "avatar.pdf",
+        contentType: "application/pdf",
+      });
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toContain("JPG, JPEG, or PNG");
+    expect(response.body.message).toContain(
+      "JPG, PNG, WEBP, GIF, AVIF, or HEIC",
+    );
   });
 });

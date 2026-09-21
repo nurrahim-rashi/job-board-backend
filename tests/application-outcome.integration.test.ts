@@ -22,6 +22,7 @@ const applicant = () =>
     address: "Jalan Polaris 7",
     city: "Jakarta",
     province: "Jakarta",
+    country: "Indonesia",
   });
 
 async function applyToNewJob(label: string) {

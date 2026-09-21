@@ -24,6 +24,7 @@ vi.mock("google-auth-library", () => ({
 const googlePayload = (payload: Record<string, unknown>) => ({
   getPayload: () => payload,
 });
+const validGoogleCredential = "mock-google-id-token-credential";
 
 setupApiIntegrationLifecycle();
 
@@ -46,7 +47,7 @@ describe("Google sign-in", () => {
 
     const response = await request(app)
       .post("/auth/google")
-      .send({ credential: "google-id-token" });
+      .send({ credential: validGoogleCredential });
 
     expect(response.status).toBe(200);
     expect(response.body.data.token).toBeTruthy();
@@ -81,7 +82,7 @@ describe("Google sign-in", () => {
 
     const response = await request(app)
       .post("/auth/google")
-      .send({ credential: "google-id-token" });
+      .send({ credential: validGoogleCredential });
 
     expect(response.status).toBe(200);
     expect(response.body.data.user.id).toBe(user.id);
@@ -105,7 +106,7 @@ describe("Google sign-in", () => {
 
     const response = await request(app)
       .post("/auth/google")
-      .send({ credential: "google-id-token" });
+      .send({ credential: validGoogleCredential });
 
     expect(response.status).toBe(409);
     expect(response.body.message).toContain("password login");
@@ -127,7 +128,7 @@ describe("Google sign-in", () => {
 
     const response = await request(app)
       .post("/auth/google")
-      .send({ credential: "google-id-token" });
+      .send({ credential: validGoogleCredential });
 
     expect(response.status).toBe(401);
   });
@@ -137,7 +138,7 @@ describe("Google sign-in", () => {
 
     const response = await request(app)
       .post("/auth/google")
-      .send({ credential: "tampered-token" });
+      .send({ credential: "tampered-google-id-token-credential" });
 
     expect(response.status).toBe(401);
     expect(response.body.message).toContain("invalid or has expired");
