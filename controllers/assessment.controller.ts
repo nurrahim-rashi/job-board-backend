@@ -18,10 +18,13 @@ import {
   getDeveloperAssessmentsService,
   verifyAssessmentCertificateService,
   getPublicSkillNamesService,
+  publishAssessmentService,
 } from "../services/assessment.service.js";
 
-export const getPublicSkillNamesController = async (_req: Request, res: Response) =>
-  res.status(200).json({ data: await getPublicSkillNamesService() });
+export const getPublicSkillNamesController = async (
+  _req: Request,
+  res: Response,
+) => res.status(200).json({ data: await getPublicSkillNamesService() });
 
 export const createAssessmentController = async (
   req: Request,
@@ -264,5 +267,20 @@ export const getDeveloperAssessmentsController = async (
   return res.status(200).json({
     message: "Developer assessments retrieved successfully",
     data: assessments,
+  });
+};
+
+export const publishAssessmentController = async (
+  req: Request,
+  res: Response,
+) => {
+  const userRole = res.locals.user.role;
+  const assessmentId = Number(req.params.assessmentId);
+
+  const assessment = await publishAssessmentService(userRole, assessmentId);
+
+  return res.status(200).json({
+    message: "Assessment published successfully",
+    data: assessment,
   });
 };

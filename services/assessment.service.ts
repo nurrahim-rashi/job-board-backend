@@ -12,6 +12,9 @@ import { randomUUID } from "node:crypto";
 
 export const getPublicSkillNamesService = async () =>
   prisma.skillAssessment.findMany({
+    where: {
+      isPublished: true,
+    },
     orderBy: { skillName: "asc" },
     select: { id: true, skillName: true },
   });
@@ -86,6 +89,10 @@ export const createAssessmentQuestionService = async (
 
   if (!assessment) {
     throw new ApiError("Assessment not found", 404);
+  }
+
+  if (assessment.isPublished) {
+    throw new ApiError("Published assessments cannot be modified", 409);
   }
 
   if (assessment._count.questions >= 25) {
@@ -178,6 +185,23 @@ export const updateAssessmentQuestionService = async (
     );
   }
 
+  const assessment = await prisma.skillAssessment.findUnique({
+    where: {
+      id: assessmentId,
+    },
+    select: {
+      isPublished: true,
+    },
+  });
+
+  if (!assessment) {
+    throw new ApiError("Assessment not found", 404);
+  }
+
+  if (assessment.isPublished) {
+    throw new ApiError("Published assessments cannot be modified", 409);
+  }
+
   const question = await prisma.skillAssessmentQuestion.findFirst({
     where: {
       id: questionId,
@@ -231,6 +255,23 @@ export const deleteAssessmentQuestionService = async (
     );
   }
 
+  const assessment = await prisma.skillAssessment.findUnique({
+    where: {
+      id: assessmentId,
+    },
+    select: {
+      isPublished: true,
+    },
+  });
+
+  if (!assessment) {
+    throw new ApiError("Assessment not found", 404);
+  }
+
+  if (assessment.isPublished) {
+    throw new ApiError("Published assessments cannot be modified", 409);
+  }
+
   const question = await prisma.skillAssessmentQuestion.findFirst({
     where: {
       id: questionId,
@@ -257,6 +298,9 @@ export const getAvailableAssessmentService = async (userId: number) => {
   await checkActiveSubscription(userId);
 
   return prisma.skillAssessment.findMany({
+    where: {
+      isPublished: true,
+    },
     select: {
       id: true,
       skillName: true,
@@ -284,9 +328,10 @@ export const getAssessmentDiscoveryDetailService = async (
 ) => {
   await checkActiveSubscription(userId);
 
-  const assessment = await prisma.skillAssessment.findUnique({
+  const assessment = await prisma.skillAssessment.findFirst({
     where: {
       id: assessmentId,
+      isPublished: true,
     },
     select: {
       id: true,
@@ -351,6 +396,13 @@ export const startAssessmentService = async (
 
   if (!assessment) {
     throw new ApiError("Assessment not found", 404);
+  }
+
+  if (!assessment.isPublished) {
+    throw new ApiError(
+      "Assessment must be published before it can be started",
+      409,
+    );
   }
 
   if (assessment.questions.length !== 25) {
@@ -766,6 +818,8 @@ export const getDeveloperAssessmentsService = async (userRole: UserRole) => {
       passingScore: true,
       durationMinutes: true,
       questionCount: true,
+      isPublished: true,
+      publishedAt: true,
       createdAt: true,
       updatedAt: true,
       _count: {
@@ -776,6 +830,60 @@ export const getDeveloperAssessmentsService = async (userRole: UserRole) => {
     },
     orderBy: {
       skillName: "asc",
+    },
+  });
+};
+
+export const publishAssessmentService = async (
+  userRole: UserRole,
+  assessmentId: number,
+) => {
+  if (userRole !== "DEVELOPER") {
+    throw new ApiError("Only developer accounts can publish assessments", 403);
+  }
+
+  const assessment = await prisma.skillAssessment.findUnique({
+    where: {
+      id: assessmentId,
+    },
+    include: {
+      _count: {
+        select: {
+          questions: true,
+        },
+      },
+    },
+  });
+
+  if (!assessment) {
+    throw new ApiError("Assessment not found", 404);
+  }
+
+  if (assessment.isPublished) {
+    return assessment;
+  }
+
+  if (assessment._count.questions !== assessment.questionCount) {
+    throw new ApiError(
+      `Assessment must contain exactly ${assessment.questionCount} questions before it can be published`,
+      409,
+    );
+  }
+
+  return prisma.skillAssessment.update({
+    where: {
+      id: assessmentId,
+    },
+    data: {
+      isPublished: true,
+      publishedAt: new Date(),
+    },
+    include: {
+      _count: {
+        select: {
+          questions: true,
+        },
+      },
     },
   });
 };

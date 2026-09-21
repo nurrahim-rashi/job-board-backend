@@ -24,6 +24,7 @@ import {
   getDeveloperAssessmentsController,
   verifyAssessmentCertificateController,
   getPublicSkillNamesController,
+  publishAssessmentController,
 } from "../controllers/assessment.controller.js";
 import { downloadAssessmentCertificateController } from "../controllers/assessment-certificate.controller.js";
 
@@ -42,6 +43,12 @@ assessmentRoutes.get(
   "/manage",
   verifyToken(process.env.JWT_SECRET!),
   getDeveloperAssessmentsController,
+);
+
+assessmentRoutes.patch(
+  "/:assessmentId/publish",
+  verifyToken(process.env.JWT_SECRET!),
+  publishAssessmentController,
 );
 
 assessmentRoutes.get(

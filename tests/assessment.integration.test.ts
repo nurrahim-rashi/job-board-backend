@@ -114,6 +114,18 @@ const create25Questions = async (assessmentId: number) => {
   });
 };
 
+const publishTestAssessment = async (assessmentId: number) => {
+  return prisma.skillAssessment.update({
+    where: {
+      id: assessmentId,
+    },
+    data: {
+      isPublished: true,
+      publishedAt: new Date(),
+    },
+  });
+};
+
 const createJobSeeker = async () => {
   return prisma.user.create({
     data: {
@@ -723,8 +735,6 @@ describe("POST /assessment", () => {
       .delete(`/assessment/${assessment.id}/questions/${question.id}`)
       .set("Authorization", `Bearer ${token}`);
 
-    console.log(response.status, response.body);
-
     expect(response.status).toBe(200);
 
     expect(response.body.message).toBe(
@@ -738,6 +748,100 @@ describe("POST /assessment", () => {
     });
 
     expect(deletedQuestion).toBeNull();
+  });
+
+  it("Should reject creating a question for a published assessment", async () => {
+    const developer = await createDeveloper();
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+    await create25Questions(assessment.id);
+    await publishTestAssessment(assessment.id);
+
+    const token = createToken(developer);
+
+    const response = await request(app)
+      .post(`/assessment/${assessment.id}/questions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        question: "New question after publication",
+        options: {
+          A: "A",
+          B: "B",
+          C: "C",
+          D: "D",
+        },
+        correctAnswer: "A",
+        questionOrder: 1,
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toBe(
+      "Published assessments cannot be modified",
+    );
+  });
+
+  it("Should reject updating a question for a published assessment", async () => {
+    const developer = await createDeveloper();
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+    await create25Questions(assessment.id);
+    await publishTestAssessment(assessment.id);
+
+    const question = await prisma.skillAssessmentQuestion.findFirstOrThrow({
+      where: {
+        assessmentId: assessment.id,
+      },
+    });
+
+    const token = createToken(developer);
+
+    const response = await request(app)
+      .patch(`/assessment/${assessment.id}/questions/${question.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        question: "This update should be rejected",
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toBe(
+      "Published assessments cannot be modified",
+    );
+  });
+
+  it("Should reject deleting a question from a published assessment", async () => {
+    const developer = await createDeveloper();
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+    await create25Questions(assessment.id);
+    await publishTestAssessment(assessment.id);
+
+    const question = await prisma.skillAssessmentQuestion.findFirstOrThrow({
+      where: {
+        assessmentId: assessment.id,
+      },
+    });
+
+    const token = createToken(developer);
+
+    const response = await request(app)
+      .delete(`/assessment/${assessment.id}/questions/${question.id}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toBe(
+      "Published assessments cannot be modified",
+    );
+
+    const savedQuestion = await prisma.skillAssessmentQuestion.findUnique({
+      where: {
+        id: question.id,
+      },
+    });
+
+    expect(savedQuestion).not.toBeNull();
   });
 
   it("Should return 404 when updating a nonexistent assessment question", async () => {
@@ -886,6 +990,8 @@ describe("POST /assessment", () => {
 
     const assessment = await createTestAssessment();
 
+    await publishTestAssessment(assessment.id);
+
     const token = createToken(jobSeeker);
 
     const response = await request(app)
@@ -953,6 +1059,8 @@ describe("POST /assessment", () => {
 
     const assessment = await createTestAssessment();
 
+    await publishTestAssessment(assessment.id);
+
     const token = createToken(jobSeeker);
 
     const response = await request(app)
@@ -1019,6 +1127,8 @@ describe("POST /assessment", () => {
     const assessment = await createTestAssessment();
 
     await create25Questions(assessment.id);
+
+    await publishTestAssessment(assessment.id);
 
     const token = createToken(jobSeeker);
 
@@ -1126,7 +1236,7 @@ describe("POST /assessment", () => {
     expect(response.body.message).toBe("Assessment not found");
   });
 
-  it("Should reject starting assessment with fewer than 25 questions", async () => {
+  it("Should reject starting an unpublished assessment", async () => {
     const jobSeeker = await prisma.user.create({
       data: {
         name: "Incomplete Assessment User",
@@ -1166,7 +1276,7 @@ describe("POST /assessment", () => {
     expect(response.status).toBe(409);
 
     expect(response.body.message).toBe(
-      "Assessment must contain exactly 25 questions before it can be started",
+      "Assessment must be published before it can be started",
     );
   });
 
@@ -1187,6 +1297,8 @@ describe("POST /assessment", () => {
     const assessment = await createTestAssessment();
 
     await create25Questions(assessment.id);
+
+    await publishTestAssessment(assessment.id);
 
     const token = createToken(jobSeeker);
 
@@ -1281,6 +1393,8 @@ describe("POST /assessment", () => {
 
     await create25Questions(assessment.id);
 
+    await publishTestAssessment(assessment.id);
+
     await prisma.skillAssessmentResult.createMany({
       data: [
         {
@@ -1331,6 +1445,8 @@ describe("POST /assessment", () => {
     const assessment = await createTestAssessment();
 
     await create25Questions(assessment.id);
+
+    await publishTestAssessment(assessment.id);
 
     await prisma.skillAssessmentResult.createMany({
       data: [
@@ -1388,6 +1504,8 @@ describe("POST /assessment", () => {
     const assessment = await createTestAssessment();
 
     await create25Questions(assessment.id);
+
+    await publishTestAssessment(assessment.id);
 
     const token = createToken(jobSeeker);
 
@@ -1482,6 +1600,8 @@ describe("POST /assessment", () => {
 
     await create25Questions(assessment.id);
 
+    await publishTestAssessment(assessment.id);
+
     const token = createToken(jobSeeker);
 
     const startResponse = await request(app)
@@ -1560,6 +1680,8 @@ describe("POST /assessment", () => {
 
     await create25Questions(assessment.id);
 
+    await publishTestAssessment(assessment.id);
+
     const token = createToken(jobSeeker);
 
     const startResponse = await request(app)
@@ -1623,6 +1745,8 @@ describe("POST /assessment", () => {
     const assessment = await createTestAssessment();
 
     await create25Questions(assessment.id);
+
+    await publishTestAssessment(assessment.id);
 
     const token = createToken(jobSeeker);
 
@@ -1691,6 +1815,8 @@ describe("POST /assessment", () => {
 
     await create25Questions(assessment.id);
 
+    await publishTestAssessment(assessment.id);
+
     const token = createToken(jobSeeker);
 
     const startResponse = await request(app)
@@ -1742,6 +1868,8 @@ describe("POST /assessment", () => {
 
     const assessment = await createTestAssessment();
     await create25Questions(assessment.id);
+
+    await publishTestAssessment(assessment.id);
 
     const otherAssessment = await prisma.skillAssessment.create({
       data: {
@@ -2658,6 +2786,98 @@ describe("POST /assessment", () => {
     expect(response.status).toBe(401);
   });
 
+  it("Should allow developer to publish a complete assessment", async () => {
+    const developer = await createDeveloper();
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+    await create25Questions(assessment.id);
+
+    const token = createToken(developer);
+
+    const response = await request(app)
+      .patch(`/assessment/${assessment.id}/publish`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe("Assessment published successfully");
+    expect(response.body.data).toMatchObject({
+      id: assessment.id,
+      isPublished: true,
+    });
+    expect(response.body.data.publishedAt).toBeDefined();
+
+    const savedAssessment = await prisma.skillAssessment.findUnique({
+      where: {
+        id: assessment.id,
+      },
+    });
+
+    expect(savedAssessment?.isPublished).toBe(true);
+    expect(savedAssessment?.publishedAt).not.toBeNull();
+  });
+
+  it("Should reject publishing an incomplete assessment", async () => {
+    const developer = await createDeveloper();
+    testUserId = developer.id;
+
+    const assessment = await createTestAssessment();
+
+    const token = createToken(developer);
+
+    const response = await request(app)
+      .patch(`/assessment/${assessment.id}/publish`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toBe(
+      "Assessment must contain exactly 25 questions before it can be published",
+    );
+  });
+
+  it("Should reject non-developer from publishing an assessment", async () => {
+    const jobSeeker = await createJobSeeker();
+    testUserId = jobSeeker.id;
+
+    const assessment = await createTestAssessment();
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .patch(`/assessment/${assessment.id}/publish`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(403);
+    expect(response.body.message).toBe(
+      "Only developer accounts can publish assessments",
+    );
+  });
+
+  it("Should hide unpublished assessments from discovery", async () => {
+    const jobSeeker = await createJobSeeker();
+    testUserId = jobSeeker.id;
+
+    await createActiveSubscription(jobSeeker.id);
+
+    const assessment = await createTestAssessment();
+
+    const token = createToken(jobSeeker);
+
+    const response = await request(app)
+      .get("/assessment/discovery")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.data).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: assessment.id,
+        }),
+      ]),
+    );
+  });
+
   it("Should allow developer to retrieve assessment management list", async () => {
     const developer = await createDeveloper();
 
@@ -2685,6 +2905,8 @@ describe("POST /assessment", () => {
           id: assessment.id,
           skillName: assessment.skillName,
           title: assessment.title,
+          isPublished: false,
+          publishedAt: null,
           passingScore: 75,
           durationMinutes: 30,
           questionCount: 25,
@@ -2718,6 +2940,41 @@ describe("POST /assessment", () => {
 
     expect(response.body.message).toBe(
       "Only developer accounts can manage assessments",
+    );
+  });
+
+  it("Should only return published assessments in public skill names", async () => {
+    const draftAssessment = await createTestAssessment();
+
+    const publishedAssessment = await prisma.skillAssessment.create({
+      data: {
+        skillName: `React-${Date.now()}`,
+        title: "React Fundamentals",
+        description: "Published assessment",
+        isPublished: true,
+        publishedAt: new Date(),
+      },
+    });
+
+    const response = await request(app).get("/assessment/skills");
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: publishedAssessment.id,
+          skillName: publishedAssessment.skillName,
+        }),
+      ]),
+    );
+
+    expect(response.body.data).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: draftAssessment.id,
+        }),
+      ]),
     );
   });
 });
