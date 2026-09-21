@@ -4,8 +4,8 @@ import FormData from "form-data";
 import multer from "multer";
 import { ApiError } from "../utils/api-error.js";
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { join, sep } from "node:path";
 
 type CloudinaryConfig = {
   cloudName?: string;
@@ -234,9 +234,6 @@ export const storeCvDocument = async (file: Express.Multer.File) => {
   }
 };
 
-/**
- * Extract public_id from secure_url
- */
 const extractPublicIdFromUrl = (url: string): string => {
   const withoutQuery = url.split("?")[0] ?? url;
   const parts = withoutQuery.split("/");
@@ -251,10 +248,14 @@ const extractPublicIdFromUrl = (url: string): string => {
   return publicIdParts.join("/").replace(/\.[^/.]+$/, "");
 };
 
-/**
- * Delete image by secure_url
- */
 export const removeImageByUrl = async (secureUrl: string) => {
+  if (secureUrl.startsWith("/uploads/")) {
+    const root = join(process.cwd(), "uploads");
+    const target = join(process.cwd(), secureUrl.slice(1));
+    if (target.startsWith(root + sep)) await rm(target, { force: true });
+    return;
+  }
+
   const { cloudName, apiKey, apiSecret } = cloudinaryConfig();
   if (!cloudName || !apiKey || !apiSecret)
     throw new ApiError("Image storage is not configured", 503);

@@ -6,7 +6,7 @@ type ApplicationWithJob = Prisma.JobApplicationGetPayload<{
 }>
 
 export const submitTestService = async (application:ApplicationWithJob) => {
-    const {result} = await getActiveSession(application);
+    const {result, duration} = await getActiveSession(application);
 
-    return finalizeTest(result.id)
+    return finalizeTest(result.id, duration)
 }

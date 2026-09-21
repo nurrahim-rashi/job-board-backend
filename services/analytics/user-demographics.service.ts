@@ -20,13 +20,26 @@ const takeTop = (
     .slice(0, limit)
     .map((entry) => ({ ...entry, share: percentage(entry.count, total) }));
 
-export const getUserDemographicsService = async (query: AnalyticsQueryInput) => {
+export const getUserDemographicsService = async (
+  query: AnalyticsQueryInput,
+  companyId?: number,
+) => {
   const { months, category, limit } = query;
+
+  const applicationScope =
+    category || companyId
+      ? {
+          job: {
+            ...(category && { category }),
+            ...(companyId && { companyId }),
+          },
+        }
+      : undefined;
 
   const userWhere: Prisma.UserWhereInput = {
     role: "JOB_SEEKER",
     createdAt: { gte: rangeStart(months) },
-    ...(category && { jobApplications: { some: { job: { category } } } }),
+    ...(applicationScope && { jobApplications: { some: applicationScope } }),
   };
 
   const [total, profiled, birthDates, genderGroups, cityGroups, provinceGroups, educationGroups] =

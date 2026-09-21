@@ -6,6 +6,10 @@ import { getSalaryTrendsService } from "../services/analytics/salary-trends.serv
 import { getUserDemographicsService } from "../services/analytics/user-demographics.service.js";
 import { parseQuery } from "../middlewares/validation.middleware.js";
 import { analyticsQuerySchema } from "../validators/analytics.validator.js";
+import { getCompanyId } from "../services/job-posting-management/job-posting.service.js";
+
+const scopeFor = async (req: Request) =>
+  req.user!.role === "COMPANY_ADMIN" ? getCompanyId(req.user!.id) : undefined;
 
 export const getAnalyticsOverviewController = async (
   req: Request,
@@ -28,7 +32,7 @@ export const getUserDemographicsController = async (
 ) => {
   try {
     const query = parseQuery(analyticsQuerySchema, req.query);
-    const result = await getUserDemographicsService(query);
+    const result = await getUserDemographicsService(query, await scopeFor(req));
     res.status(200).json({ data: result });
   } catch (error) {
     next(error);

@@ -31,9 +31,8 @@ export const saveQuestionsController = async (
   next: NextFunction,
 ) => {
   try {
-    const jobId = req.job!.id as number;
     const data = req.body;
-    const result = await saveQuestionsService(jobId, data);
+    const result = await saveQuestionsService(req.job!, data);
     res.status(200).json({ message: "Test questions saved successfully", data: result });
   } catch (error) {
     next(error);

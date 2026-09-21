@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../utils/api-error.js";
+import { visibleToSeeker } from "./application.service.js";
 
 function startOfTuesday() {
   const now = new Date();
@@ -59,7 +60,7 @@ export async function getHomepageData(userId: number) {
   const [applications, candidateJobs, newJobs, applicationCount, interviewCount] =
     await Promise.all([
       prisma.jobApplication.findMany({
-        where: { userId },
+        where: { userId, ...visibleToSeeker },
         take: 4,
         orderBy: { createdAt: "desc" },
         select: {
@@ -96,9 +97,12 @@ export async function getHomepageData(userId: number) {
       prisma.jobPosting.count({
         where: { ...activeJobWhere, createdAt: { gte: startOfTuesday() } },
       }),
-      prisma.jobApplication.count({ where: { userId } }),
+      prisma.jobApplication.count({ where: { userId, ...visibleToSeeker } }),
       prisma.interview.count({
-        where: { jobApplication: { userId }, status: "SCHEDULED" },
+        where: {
+          jobApplication: { userId, ...visibleToSeeker },
+          status: "SCHEDULED",
+        },
       }),
     ]);
 

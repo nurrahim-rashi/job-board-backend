@@ -25,8 +25,7 @@ const jobFields = z.object({
     .string()
     .trim()
     .min(2, "Country is required")
-    .max(120)
-    .default("Indonesia"),
+    .max(120),
   salaryMin: z.coerce
     .number()
     .int()
@@ -45,7 +44,7 @@ const jobFields = z.object({
       "Maximum salary cannot exceed 2,147,483,647",
     )
     .optional(),
-  salaryCurrency: currencyCodeSchema.default("IDR"),
+  salaryCurrency: currencyCodeSchema,
   tags: z.preprocess(
     (value) => (typeof value === "string" ? value.split(",") : value),
     z.array(z.string().trim().min(1)).max(10, "Maximum 10 Tags").optional(),
@@ -65,10 +64,14 @@ const salaryRangeMessage = {
   path: ["salaryMax"],
 };
 
-export const createJobSchema = jobFields.refine(
-  salaryRangeCheck,
-  salaryRangeMessage,
-);
+// Only a create fills these in. While the defaults sat on the shared shape, `.partial()` kept them
+// alive on the update schema, so every edit carried a country and a currency the client never sent.
+export const createJobSchema = jobFields
+  .extend({
+    countryLocation: jobFields.shape.countryLocation.default("Indonesia"),
+    salaryCurrency: jobFields.shape.salaryCurrency.default("IDR"),
+  })
+  .refine(salaryRangeCheck, salaryRangeMessage);
 
 export const updateJobSchema = jobFields
   .partial()

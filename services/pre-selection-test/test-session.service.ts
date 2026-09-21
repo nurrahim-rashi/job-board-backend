@@ -36,7 +36,10 @@ export const getActiveSession = async (application: ApplicationWithJob) => {
   };
 };
 
-export const finalizeTest = async (testResultId: number) => {
+export const finalizeTest = async (
+  testResultId: number,
+  durationMinutes?: number,
+) => {
   const result = await prisma.applicantTestResult.findUnique({
     where: { id: testResultId },
   });
@@ -48,7 +51,7 @@ export const finalizeTest = async (testResultId: number) => {
   if (result.submittedAt) {
     return {
       score: Number(result.score ?? 0),
-      submitedAt: result.submittedAt,
+      submittedAt: result.submittedAt,
     };
   }
 
@@ -65,7 +68,12 @@ export const finalizeTest = async (testResultId: number) => {
     totalQuestions > 0
       ? Math.round((correctAnswer / totalQuestions) * 100)
       : 0;
-  const submittedAt = new Date();
+
+  const deadline = durationMinutes
+    ? new Date(result.startedAt.getTime() + durationMinutes * 60_000)
+    : null;
+  const submittedAt =
+    deadline && deadline.getTime() < Date.now() ? deadline : new Date();
 
   await prisma.$transaction(async (tx)=>{
     await tx.applicantTestResult.update({

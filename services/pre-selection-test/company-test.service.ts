@@ -31,8 +31,8 @@ export const getTestService = async (job: JobPosting) => {
   };
 };
 
-export const saveQuestionsService = async (jobId: number, input: SaveTestInput) => {
-  const locked = await isTestLocked(jobId);
+export const saveQuestionsService = async (job: JobPosting, input: SaveTestInput) => {
+  const locked = await isTestLocked(job.id);
   if (locked) {
     throw new ApiError(
       "Questions cannot be edited because someone has already answered it",
@@ -40,11 +40,21 @@ export const saveQuestionsService = async (jobId: number, input: SaveTestInput) 
     );
   }
 
+  if (
+    job.hasPreSelectionTest &&
+    input.questions.length !== REQUIRED_QUESTION_COUNT
+  ) {
+    throw new ApiError(
+      "An active test has to keep 25 questions. Deactivate it first to save a different number.",
+      400,
+    );
+  }
+
   await prisma.$transaction([
-    prisma.preSelectionTest.deleteMany({ where: { jobId } }),
+    prisma.preSelectionTest.deleteMany({ where: { jobId: job.id } }),
     prisma.preSelectionTest.createMany({
       data: input.questions.map((q) => ({
-        jobId,
+        jobId: job.id,
         question: q.question,
         options: q.options,
         correctAnswer: q.correctAnswer,
@@ -53,7 +63,7 @@ export const saveQuestionsService = async (jobId: number, input: SaveTestInput) 
     ...(input.testDurationMinutes
       ? [
           prisma.jobPosting.update({
-            where: { id: jobId },
+            where: { id: job.id },
             data: { testDurationMinutes: input.testDurationMinutes },
           }),
         ]
