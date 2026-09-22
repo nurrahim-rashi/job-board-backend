@@ -114,6 +114,7 @@ model User {
 
   company           Company?
   jobApplications   JobApplication[]
+  savedJobs         SavedJob[]
   subscriptions     UserSubscription[]
   companyReviews    CompanyReview[]
   assessmentResults SkillAssessmentResult[]
@@ -177,6 +178,7 @@ model JobPosting {
 
   company           Company               @relation(fields: [companyId], references: [id])
   applications      JobApplication[]
+  savedBy           SavedJob[]
   preSelectionTests PreSelectionTest[]
   testResults       ApplicantTestResult[]
 
@@ -209,6 +211,20 @@ model JobApplication {
   @@index([jobId, createdAt])
   @@index([jobId, status])
   @@map("job_applications")
+}
+
+model SavedJob {
+  id        Int      @id @default(autoincrement())
+  jobId     Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  job  JobPosting @relation(fields: [jobId], references: [id])
+  user User       @relation(fields: [userId], references: [id])
+
+  @@unique([jobId, userId])
+  @@index([userId, createdAt])
+  @@map("saved_jobs")
 }
 
 model PreSelectionTest {

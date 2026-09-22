@@ -126,7 +126,12 @@ export const updateProfileSchema = z.object({
   companyCity: z.string().trim().min(2).max(100).optional(),
   companyProvince: z.string().trim().max(120).optional(),
   companyCountry: z.string().trim().min(2).max(120).optional(),
-  companyTagline: z.string().trim().max(300).optional(),
+  companyTagline: z
+    .string()
+    .trim()
+    .max(140)
+    .refine((value) => !value.includes("\n"), "Tagline must be a single line")
+    .optional(),
   companySize: z.enum([
     "2–10 people",
     "11–50 people",
