@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import { AuthProvider, UserRole } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/prisma.js";
+import { sanitizeRichText } from "../lib/sanitize-html.js";
 import { ApiError } from "../utils/api-error.js";
 import { hashPassword, verifyPassword } from "../utils/password.js";
 import { createOneTimeToken, hashToken } from "../utils/token.js";
@@ -382,7 +383,9 @@ export async function updateProfile(userId: number, input: UpdateProfileInput) {
         data: {
           ...(companyName ? { companyName } : {}),
           ...(phone ? { phone } : {}),
-          ...(profileContent !== undefined ? { profileContent } : {}),
+          ...(profileContent !== undefined
+            ? { profileContent: sanitizeRichText(profileContent) }
+            : {}),
           ...(companyCity ? { city: companyCity } : {}),
           ...(companyProvince !== undefined
             ? { province: companyProvince }

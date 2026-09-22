@@ -22,6 +22,7 @@
   "license": "ISC",
   "devDependencies": {
     "@hpcc-js/wasm-graphviz": "^1.28.0",
+    "@types/sanitize-html": "^2.16.1",
     "@types/supertest": "^7.2.1",
     "prisma-erd-generator": "^3.2.1",
     "supertest": "^7.2.2",
@@ -55,6 +56,7 @@
     "pino-http": "^11.0.0",
     "prisma": "^7.9.1",
     "qrcode": "^1.5.4",
+    "sanitize-html": "^2.17.7",
     "typescript": "^7.0.2",
     "ws": "^8.21.3",
     "zod": "^4.4.3"

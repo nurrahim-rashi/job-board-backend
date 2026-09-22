@@ -24,6 +24,7 @@ import { profileRoutes } from "./routes/profile.routes.js";
 import { subscriptionRoutes } from "./routes/subscription.routes.js";
 import { regionRoutes } from "./routes/region.routes.js";
 import { exchangeRateRoutes } from "./routes/exchange-rate.routes.js";
+import { savedJobRoutes } from "./routes/saved-job.routes.js";
 import { isImageStorageConfigured } from "./lib/cloudinary.js";
 
 const app = express();
@@ -96,6 +97,7 @@ app.use("/regions", regionRoutes);
 app.use("/exchange-rates", exchangeRateRoutes);
 app.use("/cron", cronRoutes);
 app.use("/", applicationRoutes);
+app.use("/", savedJobRoutes);
 
 // errors
 app.use(errorHandler);
