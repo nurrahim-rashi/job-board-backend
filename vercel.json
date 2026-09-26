@@ -1,6 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "npm ci --include=dev",
+  "functions": {
+    "index.ts": {
+      "includeFiles": "node_modules/pdfkit/js/standard-fonts/**"
+    }
+  },
   "crons": [
     {
       "path": "/cron/interview-reminder",
