@@ -1,4 +1,6 @@
 import PDFDocument from "pdfkit";
+import "pdfkit/standard-fonts/Helvetica";
+import "pdfkit/standard-fonts/HelveticaBold";
 import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../utils/api-error.js";
 import { checkActiveSubscription } from "../helpers/subscription.helper.js";
