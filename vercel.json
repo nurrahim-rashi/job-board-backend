@@ -6,5 +6,10 @@
       "path": "/cron/interview-reminder",
       "schedule": "0 1 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "index.ts": {
+      "includeFiles": "assets/fonts/**"
+    }
+  }
 }

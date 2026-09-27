@@ -1,6 +1,5 @@
 import PDFDocument from "pdfkit";
-import "pdfkit/standard-fonts/Helvetica";
-import "pdfkit/standard-fonts/HelveticaBold";
+import { fileURLToPath } from "node:url";
 import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../utils/api-error.js";
 import { checkActiveSubscription } from "../helpers/subscription.helper.js";
@@ -35,20 +34,29 @@ export const getCvDataService = async (
   };
 };
 
+const interRegularPath = fileURLToPath(
+  new URL("../assets/fonts/Inter-Regular.ttf", import.meta.url),
+);
+
+const interBoldPath = fileURLToPath(
+  new URL("../assets/fonts/Inter-Bold.ttf", import.meta.url),
+);
+
 export const generateCvPdfService = (data: CvPdfData): PDFKit.PDFDocument => {
   const doc = new PDFDocument({
     size: "A4",
     margin: 50,
+    font: interRegularPath,
   });
 
   const sectionHeading = (heading: string) => {
     doc.moveDown();
-    doc.font("Helvetica-Bold").fontSize(12).text(heading.toUpperCase());
+    doc.font(interBoldPath).fontSize(12).text(heading.toUpperCase());
     doc.moveDown(0.35);
   };
 
   // Header
-  doc.font("Helvetica-Bold").fontSize(22).text(data.user.name);
+  doc.font(interBoldPath).fontSize(22).text(data.user.name);
 
   doc.moveDown(0.25);
 
@@ -58,28 +66,28 @@ export const generateCvPdfService = (data: CvPdfData): PDFKit.PDFDocument => {
     [data.user.city, data.user.province, data.user.country].filter(Boolean).join(", "),
   ].filter(Boolean);
 
-  doc.font("Helvetica").fontSize(10).text(contactDetails.join(" | "));
+  doc.font(interRegularPath).fontSize(10).text(contactDetails.join(" | "));
 
   // Professional summary
   sectionHeading("Professional Summary");
 
-  doc.font("Helvetica").fontSize(10).text(data.professionalSummary, {
+  doc.font(interRegularPath).fontSize(10).text(data.professionalSummary, {
     align: "left",
   });
 
   // Skills
   sectionHeading("Skills");
 
-  doc.font("Helvetica").fontSize(10).text(data.skills.join(", "));
+  doc.font(interRegularPath).fontSize(10).text(data.skills.join(", "));
 
   // Work experience
   if (data.workExperiences.length > 0) {
     sectionHeading("Work Experience");
 
     for (const experience of data.workExperiences) {
-      doc.font("Helvetica-Bold").fontSize(11).text(experience.jobTitle);
+      doc.font(interBoldPath).fontSize(11).text(experience.jobTitle);
 
-      doc.font("Helvetica").fontSize(10).text(experience.company);
+      doc.font(interRegularPath).fontSize(10).text(experience.company);
 
       const period = experience.isCurrent
         ? `${experience.startDate} - Present`
@@ -89,7 +97,7 @@ export const generateCvPdfService = (data: CvPdfData): PDFKit.PDFDocument => {
 
       doc.moveDown(0.25);
 
-      doc.font("Helvetica").fontSize(10).text(experience.description);
+      doc.font(interRegularPath).fontSize(10).text(experience.description);
 
       doc.moveDown(0.5);
     }
@@ -99,13 +107,13 @@ export const generateCvPdfService = (data: CvPdfData): PDFKit.PDFDocument => {
   sectionHeading("Education");
 
   for (const education of data.educations) {
-    doc.font("Helvetica-Bold").fontSize(11).text(education.degree);
+    doc.font(interBoldPath).fontSize(11).text(education.degree);
 
     const educationDetail = [education.institution, education.fieldOfStudy]
       .filter(Boolean)
       .join(" | ");
 
-    doc.font("Helvetica").fontSize(10).text(educationDetail);
+    doc.font(interRegularPath).fontSize(10).text(educationDetail);
 
     if (education.startYear || education.endYear) {
       const educationPeriod = [education.startYear, education.endYear]
@@ -123,9 +131,9 @@ export const generateCvPdfService = (data: CvPdfData): PDFKit.PDFDocument => {
     sectionHeading("Projects");
 
     for (const project of data.projects) {
-      doc.font("Helvetica-Bold").fontSize(11).text(project.name);
+      doc.font(interBoldPath).fontSize(11).text(project.name);
 
-      doc.font("Helvetica").fontSize(10).text(project.description);
+      doc.font(interRegularPath).fontSize(10).text(project.description);
 
       if (project.technologies?.length) {
         doc
@@ -146,7 +154,7 @@ export const generateCvPdfService = (data: CvPdfData): PDFKit.PDFDocument => {
         ? `${language.language} - ${language.proficiency}`
         : language.language;
 
-      doc.font("Helvetica").fontSize(10).text(languageText);
+      doc.font(interRegularPath).fontSize(10).text(languageText);
     }
   }
 

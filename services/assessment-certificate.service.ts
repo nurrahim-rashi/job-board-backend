@@ -1,8 +1,11 @@
 import PDFDocument from "pdfkit";
-import "pdfkit/standard-fonts/Helvetica";
-import "pdfkit/standard-fonts/HelveticaBold";
 import QRCode from "qrcode";
+import { fileURLToPath } from "node:url";
 import type { CertificatePdfData } from "../types/assessment-certificate.type.js";
+
+const interRegularPath = fileURLToPath(
+  new URL("../assets/fonts/Inter-Regular.ttf", import.meta.url),
+);
 
 export const generateCertificatePdfService = async (
   data: CertificatePdfData,
@@ -11,6 +14,7 @@ export const generateCertificatePdfService = async (
     size: "A4",
     layout: "landscape",
     margin: 50,
+    font: interRegularPath,
   });
 
   const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
