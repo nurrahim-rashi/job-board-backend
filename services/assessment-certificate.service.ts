@@ -29,85 +29,129 @@ export const generateCertificatePdfService = async (
     margin: 1,
   });
 
-  doc.fontSize(20).text("POLARIS", {
-    align: "center",
-  });
+  const pageWidth = doc.page.width;
+  const pageHeight = doc.page.height;
+  const accentColor = "#485eb4";
 
-  doc.moveDown(1.5);
-
-  doc.fontSize(32).text("Certificate of Achievement", {
-    align: "center",
-  });
-
-  doc.moveDown();
-
-  doc.fontSize(16).text("This certificate is awarded to", {
-    align: "center",
-  });
-
-  doc.moveDown(0.5);
-
-  doc.fontSize(28).text(data.user.name, {
-    align: "center",
-  });
-
-  doc.moveDown();
-
-  doc.fontSize(16).text("for successfully completing", {
-    align: "center",
-  });
-
-  doc.moveDown(0.5);
-
-  doc.fontSize(22).text(data.assessment.title, {
-    align: "center",
-  });
-
-  doc.moveDown();
-
-  doc.fontSize(16).text(`Skill: ${data.assessment.skillName}`, {
-    align: "center",
-  });
-
-  doc.fontSize(16).text(`Score: ${data.score}`, {
-    align: "center",
-  });
-
-  doc.moveDown(1.5);
-
-  doc.fontSize(11).text(`Certificate ID: ${data.certificateCode}`, {
-    align: "center",
-  });
+  // Decorative corner accents
+  doc
+    .strokeColor(accentColor)
+    .lineWidth(4)
+    .moveTo(34, 74)
+    .lineTo(34, 34)
+    .lineTo(74, 34)
+    .stroke();
 
   doc
-    .fontSize(11)
-    .text(`Issued: ${data.completedAt.toLocaleDateString("en-GB")}`, {
+    .moveTo(pageWidth - 74, 34)
+    .lineTo(pageWidth - 34, 34)
+    .lineTo(pageWidth - 34, 74)
+    .stroke();
+
+  doc
+    .moveTo(34, pageHeight - 74)
+    .lineTo(34, pageHeight - 34)
+    .lineTo(74, pageHeight - 34)
+    .stroke();
+
+  doc
+    .moveTo(pageWidth - 74, pageHeight - 34)
+    .lineTo(pageWidth - 34, pageHeight - 34)
+    .lineTo(pageWidth - 34, pageHeight - 74)
+    .stroke();
+
+  // Header
+  doc.fillColor("#111111").fontSize(18).text("POLARIS", {
+    align: "center",
+  });
+
+  const accentWidth = 54;
+  const accentX = (pageWidth - accentWidth) / 2;
+
+  doc
+    .strokeColor(accentColor)
+    .lineWidth(2)
+    .moveTo(accentX, doc.y + 5)
+    .lineTo(accentX + accentWidth, doc.y + 5)
+    .stroke();
+
+  doc.moveDown(1.2);
+
+  doc.fontSize(30).text("Certificate of Achievement", {
+    align: "center",
+  });
+
+  doc.moveDown(0.8);
+
+  doc.fontSize(15).text("This certificate is awarded to", {
+    align: "center",
+  });
+
+  doc.moveDown(0.35);
+
+  doc.fontSize(27).text(data.user.name, {
+    align: "center",
+  });
+
+  doc.moveDown(0.7);
+
+  doc.fontSize(15).text("for successfully completing", {
+    align: "center",
+  });
+
+  doc.moveDown(0.35);
+
+  doc.fontSize(21).text(data.assessment.title, {
+    align: "center",
+  });
+
+  doc.moveDown(0.65);
+
+  doc.fontSize(14).text(`Skill: ${data.assessment.skillName}`, {
+    align: "center",
+  });
+
+  doc.fontSize(14).text(`Score: ${data.score}`, {
+    align: "center",
+  });
+
+  // Fixed metadata and QR area to prevent overlap
+  const metadataY = 410;
+
+  doc
+    .fillColor("#333333")
+    .fontSize(9)
+    .text(`Certificate ID: ${data.certificateCode}`, 100, metadataY, {
       align: "center",
+      width: pageWidth - 200,
     });
 
-  doc.moveDown();
+  doc
+    .fontSize(9)
+    .text(
+      `Issued: ${data.completedAt.toLocaleDateString("en-GB")}`,
+      100,
+      metadataY + 15,
+      {
+        align: "center",
+        width: pageWidth - 200,
+      },
+    );
 
-  const qrSize = 90;
-  const qrX = (doc.page.width - qrSize) / 2;
-
-  const bottomMargin = 50;
-  const captionGap = 8;
-  const captionHeight = 14;
-
-  const maxQrY =
-    doc.page.height - bottomMargin - qrSize - captionGap - captionHeight;
-
-  const qrY = Math.min(doc.y + 12, maxQrY);
+  const qrSize = 82;
+  const qrX = (pageWidth - qrSize) / 2;
+  const qrY = metadataY + 36;
 
   doc.image(qrCodeBuffer, qrX, qrY, {
     width: qrSize,
   });
 
   doc
-    .fontSize(9)
-    .text("Scan to verify this certificate", 50, qrY + qrSize + captionGap, {
+    .fillColor("#555555")
+    .fontSize(8)
+    .text("Scan to verify this certificate", 100, qrY + qrSize + 6, {
       align: "center",
-      width: doc.page.width - 100,
+      width: pageWidth - 200,
       lineBreak: false,
     });
 
