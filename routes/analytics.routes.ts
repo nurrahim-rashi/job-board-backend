@@ -39,7 +39,6 @@ analyticsRoutes.get(
   getApplicantInterestsController,
 );
 
-// Platform engagement ranks companies against each other, so it stays off the company dashboard.
 analyticsRoutes.get(
   "/engagement",
   verifyToken(process.env.JWT_SECRET!),

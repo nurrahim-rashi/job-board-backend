@@ -44,7 +44,6 @@ export const getApplicantDetailService = async (
     `);
     expectedSalaryRequestedAt = salaryRequest?.expectedSalaryRequestedAt ?? null;
   } catch {
-    // Keep applicant details usable while the additive nudge migration is pending.
   }
   const parsedInterview = rest.interview ? readInterviewProposal(rest.interview.notes) : null;
 

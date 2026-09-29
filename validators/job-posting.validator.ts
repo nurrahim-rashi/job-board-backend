@@ -64,8 +64,6 @@ const salaryRangeMessage = {
   path: ["salaryMax"],
 };
 
-// Only a create fills these in. While the defaults sat on the shared shape, `.partial()` kept them
-// alive on the update schema, so every edit carried a country and a currency the client never sent.
 export const createJobSchema = jobFields
   .extend({
     countryLocation: jobFields.shape.countryLocation.default("Indonesia"),
