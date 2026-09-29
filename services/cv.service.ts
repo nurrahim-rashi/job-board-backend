@@ -45,85 +45,172 @@ const interBoldPath = fileURLToPath(
 export const generateCvPdfService = (data: CvPdfData): PDFKit.PDFDocument => {
   const doc = new PDFDocument({
     size: "A4",
-    margin: 50,
+    margin: 42,
     font: interRegularPath,
   });
 
+  const contentWidth =
+    doc.page.width - doc.page.margins.left - doc.page.margins.right;
+
   const sectionHeading = (heading: string) => {
-    doc.moveDown();
-    doc.font(interBoldPath).fontSize(12).text(heading.toUpperCase());
-    doc.moveDown(0.35);
+    doc.moveDown(0.65);
+
+    doc
+      .font(interBoldPath)
+      .fontSize(10)
+      .fillColor("#111111")
+      .text(heading.toUpperCase());
+
+    const lineY = doc.y + 2;
+
+    doc
+      .strokeColor("#555555")
+      .lineWidth(0.7)
+      .moveTo(doc.page.margins.left, lineY)
+      .lineTo(doc.page.width - doc.page.margins.right, lineY)
+      .stroke();
+
+    doc.y = lineY + 6;
+  };
+
+  const rightAlignedText = (text: string, y: number) => {
+    doc
+      .font(interRegularPath)
+      .fontSize(9)
+      .fillColor("#222222")
+      .text(text, doc.page.margins.left, y, {
+        width: contentWidth,
+        align: "right",
+        lineBreak: false,
+      });
   };
 
   // Header
-  doc.font(interBoldPath).fontSize(22).text(data.user.name);
+  doc
+    .font(interBoldPath)
+    .fontSize(18)
+    .fillColor("#111111")
+    .text(data.user.name.toUpperCase(), {
+      align: "center",
+    });
 
-  doc.moveDown(0.25);
+  doc.moveDown(0.15);
+
+  const location = [
+    data.user.city,
+    data.user.province,
+    data.user.country,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   const contactDetails = [
-    data.user.email,
+    location,
     data.phone,
-    [data.user.city, data.user.province, data.user.country].filter(Boolean).join(", "),
+    data.user.email,
   ].filter(Boolean);
 
-  doc.font(interRegularPath).fontSize(10).text(contactDetails.join(" | "));
+  doc
+    .font(interRegularPath)
+    .fontSize(8.5)
+    .fillColor("#222222")
+    .text(contactDetails.join(" | "), {
+      align: "center",
+    });
 
   // Professional summary
   sectionHeading("Professional Summary");
 
-  doc.font(interRegularPath).fontSize(10).text(data.professionalSummary, {
-    align: "left",
-  });
+  doc
+    .font(interRegularPath)
+    .fontSize(9.5)
+    .fillColor("#111111")
+    .text(data.professionalSummary, {
+      align: "left",
+      lineGap: 1,
+    });
 
   // Skills
   sectionHeading("Skills");
 
-  doc.font(interRegularPath).fontSize(10).text(data.skills.join(", "));
+  doc
+    .font(interRegularPath)
+    .fontSize(9.5)
+    .text(data.skills.join(", "), {
+      lineGap: 1,
+    });
 
   // Work experience
   if (data.workExperiences.length > 0) {
     sectionHeading("Work Experience");
 
     for (const experience of data.workExperiences) {
-      doc.font(interBoldPath).fontSize(11).text(experience.jobTitle);
-
-      doc.font(interRegularPath).fontSize(10).text(experience.company);
+      const entryY = doc.y;
 
       const period = experience.isCurrent
         ? `${experience.startDate} - Present`
-        : `${experience.startDate} - ${experience.endDate}`;
+        : `${experience.startDate} - ${experience.endDate ?? ""}`;
 
-      doc.fontSize(9).text(period);
+      doc
+        .font(interBoldPath)
+        .fontSize(10)
+        .text(experience.jobTitle, doc.page.margins.left, entryY, {
+          width: contentWidth * 0.7,
+        });
 
-      doc.moveDown(0.25);
+      rightAlignedText(period, entryY);
 
-      doc.font(interRegularPath).fontSize(10).text(experience.description);
+      doc
+        .font(interRegularPath)
+        .fontSize(9)
+        .text(experience.company);
 
-      doc.moveDown(0.5);
+      doc.moveDown(0.15);
+
+      doc
+        .font(interRegularPath)
+        .fontSize(9)
+        .text(experience.description, {
+          lineGap: 1,
+        });
+
+      doc.moveDown(0.35);
     }
   }
 
   // Education
-  sectionHeading("Education");
+  if (data.educations.length > 0) {
+    sectionHeading("Education");
 
-  for (const education of data.educations) {
-    doc.font(interBoldPath).fontSize(11).text(education.degree);
+    for (const education of data.educations) {
+      const entryY = doc.y;
 
-    const educationDetail = [education.institution, education.fieldOfStudy]
-      .filter(Boolean)
-      .join(" | ");
-
-    doc.font(interRegularPath).fontSize(10).text(educationDetail);
-
-    if (education.startYear || education.endYear) {
       const educationPeriod = [education.startYear, education.endYear]
         .filter(Boolean)
         .join(" - ");
 
-      doc.fontSize(9).text(educationPeriod);
-    }
+      doc
+        .font(interBoldPath)
+        .fontSize(10)
+        .text(education.institution, doc.page.margins.left, entryY, {
+          width: contentWidth * 0.7,
+        });
 
-    doc.moveDown(0.5);
+      if (educationPeriod) {
+        rightAlignedText(educationPeriod, entryY);
+      }
+
+      const degreeText = [education.degree, education.fieldOfStudy]
+        .filter(Boolean)
+        .join(" | ");
+
+      doc
+        .font(interRegularPath)
+        .fontSize(9)
+        .text(degreeText);
+
+      doc.moveDown(0.35);
+    }
   }
 
   // Projects
@@ -131,17 +218,26 @@ export const generateCvPdfService = (data: CvPdfData): PDFKit.PDFDocument => {
     sectionHeading("Projects");
 
     for (const project of data.projects) {
-      doc.font(interBoldPath).fontSize(11).text(project.name);
+      doc
+        .font(interBoldPath)
+        .fontSize(10)
+        .text(project.name);
 
-      doc.font(interRegularPath).fontSize(10).text(project.description);
+      doc
+        .font(interRegularPath)
+        .fontSize(9)
+        .text(project.description, {
+          lineGap: 1,
+        });
 
       if (project.technologies?.length) {
         doc
-          .fontSize(9)
+          .font(interRegularPath)
+          .fontSize(8.5)
           .text(`Technologies: ${project.technologies.join(", ")}`);
       }
 
-      doc.moveDown(0.5);
+      doc.moveDown(0.35);
     }
   }
 
@@ -149,13 +245,18 @@ export const generateCvPdfService = (data: CvPdfData): PDFKit.PDFDocument => {
   if (data.languages?.length) {
     sectionHeading("Languages");
 
-    for (const language of data.languages) {
-      const languageText = language.proficiency
-        ? `${language.language} - ${language.proficiency}`
-        : language.language;
+    const languageText = data.languages
+      .map((language) =>
+        language.proficiency
+          ? `${language.language} - ${language.proficiency}`
+          : language.language,
+      )
+      .join(" | ");
 
-      doc.font(interRegularPath).fontSize(10).text(languageText);
-    }
+    doc
+      .font(interRegularPath)
+      .fontSize(9)
+      .text(languageText);
   }
 
   return doc;
