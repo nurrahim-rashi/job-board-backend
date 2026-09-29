@@ -6,6 +6,7 @@ import { sanitizeRichText } from "../lib/sanitize-html.js";
 import { ApiError } from "../utils/api-error.js";
 import { hashPassword, verifyPassword } from "../utils/password.js";
 import { createOneTimeToken, hashToken } from "../utils/token.js";
+import { assertEmailLinkActive, emailLinks, invalidEmailLink } from "../utils/email-link.js";
 import { sendEmail } from "./email.service.js";
 import { buildPolarisEmail } from "./email-template.service.js";
 import type {
@@ -88,7 +89,7 @@ async function sendVerificationEmail(userId: number, email: string) {
     where: { id: userId },
     data: {
       emailVerificationTokenHash: hash,
-      emailVerificationExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      emailVerificationExpiresAt: new Date(Date.now() + emailLinks.verification.minutes * 60 * 1000),
     },
   });
   const verificationUrl = frontendUrl("/verify-email", token);
@@ -244,19 +245,13 @@ export async function getSubscriptionStatus(userId: number) {
   };
 }
 
-function invalidVerificationLink() {
-  return new ApiError("Verification link is invalid or has already been used. Request a new link.", 400, "VERIFICATION_INVALID");
-}
-
 export async function verifyEmail(token: string) {
   const hash = hashToken(token);
   const user = await prisma.user.findFirst({
     where: { emailVerificationTokenHash: hash },
   });
-  if (!user || user.emailVerifiedAt || !user.emailVerificationExpiresAt)
-    throw invalidVerificationLink();
-  if (user.emailVerificationExpiresAt.getTime() <= Date.now())
-    throw new ApiError("Verification link has expired. Verification links are valid for 5 minutes. Request a new link.", 400, "VERIFICATION_EXPIRED");
+  if (!user || user.emailVerifiedAt) throw invalidEmailLink("verification");
+  assertEmailLinkActive("verification", user.emailVerificationExpiresAt);
 
   const result = await prisma.user.updateMany({
     where: {
@@ -271,14 +266,21 @@ export async function verifyEmail(token: string) {
       emailVerificationExpiresAt: null,
     },
   });
-  if (!result.count) throw invalidVerificationLink();
+  if (!result.count) {
+    // A token can expire or be replaced while the conditional update is running.
+    const current = await prisma.user.findFirst({
+      where: { id: user.id, emailVerificationTokenHash: hash, emailVerifiedAt: null },
+    });
+    if (current) assertEmailLinkActive("verification", current.emailVerificationExpiresAt);
+    throw invalidEmailLink("verification");
+  }
 }
 
 export async function resendVerificationByToken(token: string) {
   const user = await prisma.user.findFirst({
     where: { emailVerificationTokenHash: hashToken(token), emailVerifiedAt: null },
   });
-  if (!user || !user.emailVerificationExpiresAt) throw invalidVerificationLink();
+  if (!user || !user.emailVerificationExpiresAt) throw invalidEmailLink("verification");
   if (user.emailVerificationExpiresAt.getTime() > Date.now())
     throw new ApiError("Your verification link is still valid. Use the link in your email.", 400);
   await sendVerificationEmail(user.id, user.email);
@@ -300,42 +302,61 @@ export async function requestPasswordReset(email: string) {
     where: { id: user.id },
     data: {
       passwordResetTokenHash: hash,
-      passwordResetExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      passwordResetExpiresAt: new Date(Date.now() + emailLinks.passwordReset.minutes * 60 * 1000),
     },
   });
   const resetUrl = frontendUrl("/reset-password/confirm", token);
   await sendEmail({
     to: user.email,
     subject: "Reset your Polaris password",
-    text: `Reset your password within five minutes: ${resetUrl}`,
+    text: `Reset your password within ${emailLinks.passwordReset.minutes} minutes: ${resetUrl}`,
     html: buildPolarisEmail({
       preheader: "Use this secure link to reset your Polaris password.",
       eyebrow: "Account security",
       title: "Reset your password",
-      message: "We received a request to reset your Polaris password. The secure link below expires in five minutes.",
+      message: `We received a request to reset your Polaris password. The secure link below expires in ${emailLinks.passwordReset.minutes} minutes.`,
       action: { label: "Reset password", url: resetUrl },
       note: "If you did not request a password reset, no action is needed and your password will remain unchanged.",
     }),
   });
 }
 
-export async function resetPassword(token: string, password: string) {
+export async function validatePasswordResetLink(token: string) {
   const user = await prisma.user.findFirst({
     where: {
       passwordResetTokenHash: hashToken(token),
-      passwordResetExpiresAt: { gt: new Date() },
       authProvider: AuthProvider.EMAIL,
     },
   });
-  if (!user) throw new ApiError("Reset link is invalid or has expired", 400);
-  await prisma.user.update({
-    where: { id: user.id },
+  if (!user) throw invalidEmailLink("passwordReset");
+  assertEmailLinkActive("passwordReset", user.passwordResetExpiresAt);
+  return user;
+}
+
+export async function resetPassword(token: string, password: string) {
+  const hash = hashToken(token);
+  const user = await validatePasswordResetLink(token);
+  const passwordHash = await hashPassword(password);
+  const result = await prisma.user.updateMany({
+    where: {
+      id: user.id,
+      authProvider: AuthProvider.EMAIL,
+      passwordResetTokenHash: hash,
+      passwordResetExpiresAt: { gt: new Date() },
+    },
     data: {
-      password: await hashPassword(password),
+      password: passwordHash,
       passwordResetTokenHash: null,
       passwordResetExpiresAt: null,
     },
   });
+  if (!result.count) {
+    const current = await prisma.user.findFirst({
+      where: { id: user.id, passwordResetTokenHash: hash, authProvider: AuthProvider.EMAIL },
+    });
+    if (current) assertEmailLinkActive("passwordReset", current.passwordResetExpiresAt);
+    throw invalidEmailLink("passwordReset");
+  }
 }
 
 export async function updateProfile(userId: number, input: UpdateProfileInput) {

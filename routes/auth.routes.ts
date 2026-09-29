@@ -17,9 +17,11 @@ import {
   uploadCompanyMediaController,
   removeCompanyMediaController,
   verifyEmailController,
+  validatePasswordResetLinkController,
 } from "../controllers/auth.controller.js";
 import { verifyToken } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validation.middleware.js";
+import { validateEmailLinkToken } from "../middlewares/email-link.middleware.js";
 import {
   changePasswordSchema,
   emailSchema,
@@ -59,7 +61,7 @@ authRoutes.post(
   validate(googleLoginSchema),
   googleLoginController,
 );
-authRoutes.post("/verify-email", validate(tokenSchema), verifyEmailController);
+authRoutes.post("/verify-email", validateEmailLinkToken("verification"), validate(tokenSchema), verifyEmailController);
 authRoutes.post(
   "/resend-verification",
   emailDispatchLimiter,
@@ -73,8 +75,16 @@ authRoutes.post(
   forgotPasswordController,
 );
 authRoutes.post(
+  "/reset-password/validate",
+  credentialsLimiter,
+  validateEmailLinkToken("passwordReset"),
+  validate(tokenSchema),
+  validatePasswordResetLinkController,
+);
+authRoutes.post(
   "/reset-password",
   credentialsLimiter,
+  validateEmailLinkToken("passwordReset"),
   validate(resetPasswordSchema),
   resetPasswordController,
 );
