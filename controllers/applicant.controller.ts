@@ -82,8 +82,6 @@ export const getApplicantCvController = async (
       return;
     }
 
-    // The stored provider URL stays on the server; only the bytes are relayed,
-    // and only to a caller that already passed the job-owner check.
     const document = await axios.get<Readable>(cv.source.url, {
       responseType: "stream",
       timeout: 30_000,
