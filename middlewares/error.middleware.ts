@@ -13,5 +13,5 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
       : error instanceof multer.MulterError
         ? error.code === "LIMIT_FILE_SIZE" ? "Image file is too large" : error.message
         : "Internal server error";
-  return res.status(statusCode).json({ message });
+  return res.status(statusCode).json({ message, ...(error instanceof ApiError && error.code ? { code: error.code } : {}) });
 };

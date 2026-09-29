@@ -88,19 +88,19 @@ async function sendVerificationEmail(userId: number, email: string) {
     where: { id: userId },
     data: {
       emailVerificationTokenHash: hash,
-      emailVerificationExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      emailVerificationExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
     },
   });
   const verificationUrl = frontendUrl("/verify-email", token);
   await sendEmail({
     to: email,
     subject: "Verify your Polaris email",
-    text: `Verify your email within one hour: ${verificationUrl}`,
+    text: `Verify your email within five minutes: ${verificationUrl}`,
     html: buildPolarisEmail({
       preheader: "Verify your email address to finish setting up Polaris.",
       eyebrow: "Email verification",
       title: "Confirm your email",
-      message: "One quick step remains before your Polaris account is ready. This secure link expires in one hour.",
+      message: "One quick step remains before your Polaris account is ready. This secure link expires in five minutes.",
       action: { label: "Verify email", url: verificationUrl },
       note: "If you did not create or update a Polaris account, you can safely ignore this email.",
     }),
@@ -244,23 +244,44 @@ export async function getSubscriptionStatus(userId: number) {
   };
 }
 
+function invalidVerificationLink() {
+  return new ApiError("Verification link is invalid or has already been used. Request a new link.", 400, "VERIFICATION_INVALID");
+}
+
 export async function verifyEmail(token: string) {
+  const hash = hashToken(token);
   const user = await prisma.user.findFirst({
+    where: { emailVerificationTokenHash: hash },
+  });
+  if (!user || user.emailVerifiedAt || !user.emailVerificationExpiresAt)
+    throw invalidVerificationLink();
+  if (user.emailVerificationExpiresAt.getTime() <= Date.now())
+    throw new ApiError("Verification link has expired. Verification links are valid for 5 minutes. Request a new link.", 400, "VERIFICATION_EXPIRED");
+
+  const result = await prisma.user.updateMany({
     where: {
-      emailVerificationTokenHash: hashToken(token),
+      id: user.id,
+      emailVerifiedAt: null,
+      emailVerificationTokenHash: hash,
       emailVerificationExpiresAt: { gt: new Date() },
     },
-  });
-  if (!user)
-    throw new ApiError("Verification link is invalid or has expired", 400);
-  await prisma.user.update({
-    where: { id: user.id },
     data: {
       emailVerifiedAt: new Date(),
       emailVerificationTokenHash: null,
       emailVerificationExpiresAt: null,
     },
   });
+  if (!result.count) throw invalidVerificationLink();
+}
+
+export async function resendVerificationByToken(token: string) {
+  const user = await prisma.user.findFirst({
+    where: { emailVerificationTokenHash: hashToken(token), emailVerifiedAt: null },
+  });
+  if (!user || !user.emailVerificationExpiresAt) throw invalidVerificationLink();
+  if (user.emailVerificationExpiresAt.getTime() > Date.now())
+    throw new ApiError("Your verification link is still valid. Use the link in your email.", 400);
+  await sendVerificationEmail(user.id, user.email);
 }
 
 export async function resendVerificationEmail(email: string) {
@@ -286,12 +307,12 @@ export async function requestPasswordReset(email: string) {
   await sendEmail({
     to: user.email,
     subject: "Reset your Polaris password",
-    text: `Reset your password within one hour: ${resetUrl}`,
+    text: `Reset your password within five minutes: ${resetUrl}`,
     html: buildPolarisEmail({
       preheader: "Use this secure link to reset your Polaris password.",
       eyebrow: "Account security",
       title: "Reset your password",
-      message: "We received a request to reset your Polaris password. The secure link below expires in one hour.",
+      message: "We received a request to reset your Polaris password. The secure link below expires in five minutes.",
       action: { label: "Reset password", url: resetUrl },
       note: "If you did not request a password reset, no action is needed and your password will remain unchanged.",
     }),

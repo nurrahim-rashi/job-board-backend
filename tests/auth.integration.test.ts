@@ -18,7 +18,7 @@ import {
 setupApiIntegrationLifecycle();
 
 describe("Authentication and authorization", () => {
-  it("registers a job seeker and stores a hashed password plus a one-hour verification token", async () => {
+  it("registers a job seeker and stores a hashed password plus a five-minute verification token", async () => {
     const email = createTestEmail("register-seeker");
     const before = Date.now();
 
@@ -42,10 +42,10 @@ describe("Authentication and authorization", () => {
     expect(stored.password).not.toBe(validPassword);
     expect(stored.emailVerificationTokenHash).toMatch(/^[a-f0-9]{64}$/);
     expect(stored.emailVerificationExpiresAt!.getTime()).toBeGreaterThan(
-      before + 59 * 60 * 1000,
+      before + 4 * 60 * 1000,
     );
     expect(stored.emailVerificationExpiresAt!.getTime()).toBeLessThanOrEqual(
-      Date.now() + 60 * 60 * 1000,
+      Date.now() + 5 * 60 * 1000,
     );
   });
 
@@ -134,6 +134,7 @@ describe("Authentication and authorization", () => {
       .post("/auth/verify-email")
       .send({ token: rawToken });
     expect(reused.status).toBe(400);
+    expect(reused.body.code).toBe("VERIFICATION_INVALID");
 
     const expiredToken = randomUUID().replaceAll("-", "");
     await createTestSeeker("expired-verification", {
@@ -144,6 +145,8 @@ describe("Authentication and authorization", () => {
       .post("/auth/verify-email")
       .send({ token: expiredToken });
     expect(expired.status).toBe(400);
+    expect(expired.body.code).toBe("VERIFICATION_EXPIRED");
+    expect(expired.body.message).toContain("5 minutes");
   });
 
   it("resets an email account password with a one-time token", async () => {

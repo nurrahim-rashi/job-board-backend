@@ -23,6 +23,7 @@ import { validate } from "../middlewares/validation.middleware.js";
 import {
   changePasswordSchema,
   emailSchema,
+  resendVerificationSchema,
   googleLoginSchema,
   loginSchema,
   registerSchema,
@@ -62,7 +63,7 @@ authRoutes.post("/verify-email", validate(tokenSchema), verifyEmailController);
 authRoutes.post(
   "/resend-verification",
   emailDispatchLimiter,
-  validate(emailSchema),
+  validate(resendVerificationSchema),
   resendVerificationController,
 );
 authRoutes.post(
