@@ -29,7 +29,7 @@ beforeEach(() => {
 });
 
 describe("Resending the verification email", () => {
-  it("issues a fresh one-hour token for an unverified account", async () => {
+  it("issues a fresh five-minute token for an unverified account", async () => {
     const user = await createTestSeeker("resend-unverified", {
       emailVerificationTokenHash: "stale-hash",
       emailVerificationExpiresAt: new Date(Date.now() - 60 * 60 * 1000),
@@ -50,8 +50,8 @@ describe("Resending the verification email", () => {
     expect(stored.emailVerificationTokenHash).not.toBe("stale-hash");
     expect(stored.emailVerificationTokenHash).toBeTruthy();
     const expiresAt = stored.emailVerificationExpiresAt?.getTime() ?? 0;
-    expect(expiresAt).toBeGreaterThan(before + 55 * 60 * 1000);
-    expect(expiresAt).toBeLessThanOrEqual(Date.now() + 60 * 60 * 1000);
+    expect(expiresAt).toBeGreaterThan(before + 4 * 60 * 1000);
+    expect(expiresAt).toBeLessThanOrEqual(Date.now() + 5 * 60 * 1000);
   });
 
   it("refuses to resend once the account is already verified", async () => {

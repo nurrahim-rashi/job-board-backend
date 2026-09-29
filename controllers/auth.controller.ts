@@ -2,7 +2,6 @@ import type { Request, Response } from "express";
 import { type AuthenticatedRequest } from "../middlewares/auth.middleware.js";
 import { uploadImage, verifiedImage } from "../lib/cloudinary.js";
 import { getHomepageData } from "../services/homepage.service.js";
-import { ApiError } from "../utils/api-error.js";
 import {
   changePassword,
   getAuthenticatedUser,
@@ -12,6 +11,7 @@ import {
   registerUser,
   requestPasswordReset,
   resendVerificationEmail,
+  resendVerificationByToken,
   resetPassword,
   updateProfile,
   updateAvatar,
@@ -73,7 +73,8 @@ export async function resendVerificationController(
   req: Request,
   res: Response,
 ) {
-  await resendVerificationEmail(req.body.email);
+  if (req.body.token) await resendVerificationByToken(req.body.token);
+  else await resendVerificationEmail(req.body.email);
   return res.status(200).json({
     message: "If the account needs verification, a new email has been sent.",
   });
@@ -112,8 +113,17 @@ export async function changePasswordController(req: Request, res: Response) {
 export async function uploadAvatarController(req: Request, res: Response) {
   const file = (req as any).file;
   if (!file) {
-    if (!String(req.headers["content-type"] ?? "").startsWith("multipart/form-data")) {
-      return res.status(400).json({ message: "Upload the avatar as multipart form data using the avatar field" });
+    if (
+      !String(req.headers["content-type"] ?? "").startsWith(
+        "multipart/form-data",
+      )
+    ) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Upload the avatar as multipart form data using the avatar field",
+        });
     }
     return res.status(400).json({ message: "Avatar file is required" });
   }
@@ -158,7 +168,8 @@ export async function uploadCompanyMediaController(
     return res.status(400).json({ message: "Image must be 4MB or smaller" });
   }
   const checked = verifiedImage(file, "Company media");
-  const mediaUrl = (await uploadImage(checked, `companies/${field}`)).secure_url;
+  const mediaUrl = (await uploadImage(checked, `companies/${field}`))
+    .secure_url;
 
   const user = await updateCompanyMedia(userId(req), field, mediaUrl);
   return res

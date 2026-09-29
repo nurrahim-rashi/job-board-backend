@@ -73,6 +73,8 @@ export const emailSchema = z.object({
   email: z.email("Enter a valid email address").trim().toLowerCase(),
 });
 
+export const resendVerificationSchema = z.union([emailSchema.strict(), tokenSchema.strict()]);
+
 export const resetPasswordSchema = tokenSchema.extend({
   password: passwordSchema,
 });
