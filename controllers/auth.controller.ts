@@ -17,6 +17,7 @@ import {
   updateAvatar,
   updateCompanyMedia,
   verifyEmail,
+  validatePasswordResetLink,
 } from "../services/auth.service.js";
 
 const userId = (req: Request) => (req as AuthenticatedRequest).user.id;
@@ -67,6 +68,11 @@ export async function verifyEmailController(req: Request, res: Response) {
   return res
     .status(200)
     .json({ message: "Email verified. Please sign in again." });
+}
+
+export async function validatePasswordResetLinkController(req: Request, res: Response) {
+  await validatePasswordResetLink(req.body.token);
+  res.status(200).json({ message: "Password reset link is valid." });
 }
 
 export async function resendVerificationController(
