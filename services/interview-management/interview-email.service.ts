@@ -1,3 +1,4 @@
+import { buildPolarisEmail } from "../email-template.service.js";
 import { sendEmail } from "../email.service.js";
 
 export type InterviewEmailContext = {
@@ -23,94 +24,121 @@ export const formatInterviewDate = (date: Date) =>
     timeZone: timeZone(),
   }).format(date);
 
-const scheduleLines = (context: InterviewEmailContext) =>
-  [
-    `Position: ${context.jobTitle}`,
-    `Company: ${context.companyName}`,
-    `Date and time: ${formatInterviewDate(context.interviewDate)} (${timeZone()})`,
-    `Location or link: ${context.locationOrLink}`,
-    ...(context.notes ? [`Notes: ${context.notes}`] : []),
-  ].join("\n");
+const isLink = (value: string) => /^https?:\/\//i.test(value.trim());
+
+const scheduleDetails = (context: InterviewEmailContext) => [
+  { label: "Position", value: context.jobTitle },
+  { label: "Company", value: context.companyName },
+  { label: "Date and time", value: `${formatInterviewDate(context.interviewDate)} (${timeZone()})` },
+  {
+    label: "Location or link",
+    value: context.locationOrLink,
+    ...(isLink(context.locationOrLink) && { url: context.locationOrLink.trim() }),
+  },
+  ...(context.notes ? [{ label: "Notes", value: context.notes }] : []),
+];
+
+type InterviewEmail = {
+  to: string;
+  subject: string;
+  eyebrow: string;
+  title: string;
+  greeting: string;
+  message: string;
+  details: { label: string; value: string; url?: string }[];
+  note?: string;
+};
+
+const sendInterviewEmail = (email: InterviewEmail) =>
+  sendEmail({
+    to: email.to,
+    subject: email.subject,
+    text: [
+      email.greeting,
+      "",
+      email.message,
+      "",
+      ...email.details.map((detail) => `${detail.label}: ${detail.value}`),
+      ...(email.note ? ["", email.note] : []),
+    ].join("\n"),
+    html: buildPolarisEmail({
+      preheader: email.message,
+      eyebrow: email.eyebrow,
+      title: email.title,
+      greeting: email.greeting,
+      message: email.message,
+      details: email.details,
+      note: email.note,
+    }),
+  });
 
 export const sendInterviewScheduledEmail = async (
   context: InterviewEmailContext,
 ) =>
-  sendEmail({
+  sendInterviewEmail({
     to: context.applicantEmail,
     subject: `Interview schedule for ${context.jobTitle}`,
-    text: [
-      `Hi ${context.applicantName},`,
-      "",
-      `${context.companyName} has scheduled an interview with you.`,
-      "",
-      scheduleLines(context),
-      "",
-      "Please be available a few minutes before the interview starts.",
-    ].join("\n"),
+    eyebrow: "Interview invitation",
+    title: "You are invited to an interview",
+    greeting: `Hi ${context.applicantName},`,
+    message: `${context.companyName} has scheduled an interview with you.`,
+    details: scheduleDetails(context),
+    note: "Please be available a few minutes before the interview starts.",
   });
 
 export const sendInterviewUpdatedEmail = async (
   context: InterviewEmailContext,
 ) =>
-  sendEmail({
+  sendInterviewEmail({
     to: context.applicantEmail,
     subject: `Updated interview schedule for ${context.jobTitle}`,
-    text: [
-      `Hi ${context.applicantName},`,
-      "",
-      `${context.companyName} has updated your interview details.`,
-      "",
-      scheduleLines(context),
-      "",
-      "Please use this schedule instead of the previous one.",
-    ].join("\n"),
+    eyebrow: "Interview rescheduled",
+    title: "Your interview details changed",
+    greeting: `Hi ${context.applicantName},`,
+    message: `${context.companyName} has updated your interview details.`,
+    details: scheduleDetails(context),
+    note: "Please use this schedule instead of the previous one.",
   });
 
 export const sendInterviewCancelledEmail = async (
   context: InterviewEmailContext,
 ) =>
-  sendEmail({
+  sendInterviewEmail({
     to: context.applicantEmail,
     subject: `Interview cancelled for ${context.jobTitle}`,
-    text: [
-      `Hi ${context.applicantName},`,
-      "",
-      `${context.companyName} has cancelled the interview scheduled on ${formatInterviewDate(context.interviewDate)} (${timeZone()}).`,
-      "",
-      "You will be contacted again if the interview is rescheduled.",
-    ].join("\n"),
+    eyebrow: "Interview cancelled",
+    title: "Your interview was cancelled",
+    greeting: `Hi ${context.applicantName},`,
+    message: `${context.companyName} has cancelled the interview below.`,
+    details: scheduleDetails(context).filter((detail) => detail.label !== "Notes"),
+    note: "You will be contacted again if the interview is rescheduled.",
   });
 
 export const sendApplicantReminderEmail = async (
   context: InterviewEmailContext,
 ) =>
-  sendEmail({
+  sendInterviewEmail({
     to: context.applicantEmail,
     subject: `Reminder: interview for ${context.jobTitle} tomorrow`,
-    text: [
-      `Hi ${context.applicantName},`,
-      "",
-      "This is a reminder for your upcoming interview.",
-      "",
-      scheduleLines(context),
-      "",
-      "Good luck!",
-    ].join("\n"),
+    eyebrow: "Interview reminder",
+    title: "Your interview is tomorrow",
+    greeting: `Hi ${context.applicantName},`,
+    message: "This is a reminder for your upcoming interview.",
+    details: scheduleDetails(context),
+    note: "Good luck!",
   });
 
 export const sendAdminReminderEmail = async (
   context: InterviewEmailContext,
 ) =>
-  sendEmail({
+  sendInterviewEmail({
     to: context.companyEmail,
     subject: `Reminder: interview with ${context.applicantName} tomorrow`,
-    text: [
-      "Hello,",
-      "",
-      `You have an upcoming interview with ${context.applicantName} (${context.applicantEmail}).`,
-      "",
-      scheduleLines(context),
-    ].join("\n"),
+    eyebrow: "Interview reminder",
+    title: `Interview with ${context.applicantName} tomorrow`,
+    greeting: "Hello,",
+    message: `You have an upcoming interview with ${context.applicantName} (${context.applicantEmail}).`,
+    details: scheduleDetails(context),
   });
 
 export const dispatchEmails = async (deliveries: Promise<unknown>[]) => {

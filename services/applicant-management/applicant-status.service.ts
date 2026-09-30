@@ -3,6 +3,11 @@ import type { ApplicationStatus } from "../../generated/prisma/enums.js";
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/api-error.js";
 import { UpdateStatusInput } from "../../validators/applicant.validator.js";
+import { dispatchEmails } from "../interview-management/interview-email.service.js";
+import {
+  sendApplicantAcceptedEmail,
+  sendApplicantRejectedEmail,
+} from "./applicant-email.service.js";
 
 const nextStatuses: Partial<Record<ApplicationStatus, ApplicationStatus[]>> = {
   PENDING: ["PROCESS", "INTERVIEW", "REJECTED"],
@@ -42,7 +47,7 @@ export const updateApplicantStatusService = async (
     );
   }
 
-  return prisma.jobApplication.update({
+  const updated = await prisma.jobApplication.update({
     where: { id: application.id },
     data: {
       status: input.status,
@@ -53,4 +58,33 @@ export const updateApplicantStatusService = async (
       user: { select: { id: true, name: true, email: true, avatar: true } },
     },
   });
+
+  await notifyDecision(job, updated);
+  return updated;
+};
+
+const notifyDecision = async (
+  job: JobPosting,
+  application: { status: ApplicationStatus; rejectionReason: string | null; user: { name: string; email: string } },
+) => {
+  if (application.status !== "ACCEPTED" && application.status !== "REJECTED") return;
+
+  const company = await prisma.company.findUnique({
+    where: { id: job.companyId },
+    select: { companyName: true },
+  });
+
+  const context = {
+    applicantName: application.user.name,
+    applicantEmail: application.user.email,
+    companyName: company?.companyName ?? "The company",
+    jobTitle: job.title,
+    rejectionReason: application.rejectionReason,
+  };
+
+  await dispatchEmails([
+    application.status === "ACCEPTED"
+      ? sendApplicantAcceptedEmail(context)
+      : sendApplicantRejectedEmail(context),
+  ]);
 };
