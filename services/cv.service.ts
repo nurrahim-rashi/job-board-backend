@@ -158,7 +158,11 @@ export const generateCvPdfService = (data: CvPdfData): PDFKit.PDFDocument => {
           width: contentWidth * 0.7,
         });
 
+      const contentY = doc.y;
+
       rightAlignedText(period, entryY);
+
+      doc.y = contentY;
 
       doc
         .font(interRegularPath)
@@ -196,8 +200,11 @@ export const generateCvPdfService = (data: CvPdfData): PDFKit.PDFDocument => {
           width: contentWidth * 0.7,
         });
 
+      const contentY = doc.y;
+
       if (educationPeriod) {
         rightAlignedText(educationPeriod, entryY);
+        doc.y = contentY;
       }
 
       const degreeText = [education.degree, education.fieldOfStudy]
